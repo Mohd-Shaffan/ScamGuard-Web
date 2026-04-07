@@ -1,0 +1,1668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ScamGuard v2.0 — Live Vishing Detection</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;500;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet" />
+
+<style>
+/* ── CSS VARIABLES ───────────────────────────────────────────────────── */
+:root {
+  --bg:        #04060d;
+  --bg2:       #080c18;
+  --panel:     #0b1020;
+  --border:    #1a2540;
+  --border-hi: #1e3a6e;
+
+  --cyan:      #00f0ff;
+  --cyan-dim:  #007a88;
+  --cyan-glow: rgba(0,240,255,0.12);
+
+  --green:     #00ff9d;
+  --green-dim: #006644;
+  --green-glow:rgba(0,255,157,0.12);
+
+  --amber:     #ffb800;
+  --amber-dim: #7a5800;
+  --amber-glow:rgba(255,184,0,0.15);
+
+  --red:       #ff2244;
+  --red-dim:   #7a0011;
+  --red-glow:  rgba(255,34,68,0.18);
+
+  --text:      #c8d8f0;
+  --text-dim:  #4a6080;
+  --text-hi:   #ffffff;
+
+  --mono: 'Share Tech Mono', monospace;
+  --head: 'Orbitron', sans-serif;
+  --body: 'Rajdhani', sans-serif;
+
+  --radius: 4px;
+  --transition: 0.3s ease;
+}
+
+/* ── RESET & BASE ────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 14px; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--body);
+  font-weight: 300;
+  letter-spacing: 0.02em;
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Scanline overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.08) 2px,
+    rgba(0,0,0,0.08) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Grid background */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,240,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,240,255,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── LAYOUT ──────────────────────────────────────────────────────────── */
+.app-wrapper {
+  position: relative;
+  z-index: 1;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 16px 40px;
+}
+
+/* ── HEADER ──────────────────────────────────────────────────────────── */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 0 14px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 24px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.logo-icon {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+}
+
+.logo-text h1 {
+  font-family: var(--head);
+  font-size: 1.45rem;
+  font-weight: 900;
+  color: var(--cyan);
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-shadow: 0 0 20px var(--cyan);
+}
+
+.logo-text p {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  letter-spacing: 0.15em;
+  margin-top: 3px;
+}
+
+.header-status {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.status-badge {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+}
+
+.status-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+.model-tag {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--cyan-dim);
+  background: rgba(0,240,255,0.06);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 3px 8px;
+  letter-spacing: 0.1em;
+}
+
+/* ── MAIN GRID ───────────────────────────────────────────────────────── */
+.grid-main {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  grid-template-rows: auto auto;
+  gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .grid-main { grid-template-columns: 1fr; }
+}
+
+/* ── PANEL BASE ──────────────────────────────────────────────────────── */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(0,240,255,0.025);
+}
+
+.panel-title {
+  font-family: var(--head);
+  font-size: 0.72rem;
+  color: var(--cyan);
+  letter-spacing: 0.2em;
+  font-weight: 700;
+}
+
+.panel-badge {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+}
+
+/* ── SUSPICION GAUGE (SVG arc) ───────────────────────────────────────── */
+.gauge-panel {
+  padding: 28px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.gauge-wrap {
+  position: relative;
+  width: 220px;
+  height: 120px;
+  margin-bottom: 12px;
+}
+
+.gauge-svg {
+  width: 220px;
+  height: 132px;
+  overflow: visible;
+}
+
+.gauge-track {
+  fill: none;
+  stroke: var(--border);
+  stroke-width: 12;
+  stroke-linecap: round;
+}
+
+.gauge-fill {
+  fill: none;
+  stroke: var(--green);
+  stroke-width: 12;
+  stroke-linecap: round;
+  stroke-dasharray: 339.292;  /* π × r = π × 108 */
+  stroke-dashoffset: 339.292;
+  transition: stroke-dashoffset 0.5s cubic-bezier(0.4,0,0.2,1),
+              stroke 0.4s ease,
+              filter 0.4s ease;
+  transform-origin: center;
+}
+
+.gauge-glow {
+  fill: none;
+  stroke: var(--green);
+  stroke-width: 18;
+  stroke-linecap: round;
+  stroke-dasharray: 339.292;
+  stroke-dashoffset: 339.292;
+  opacity: 0.18;
+  filter: blur(4px);
+  transition: stroke-dashoffset 0.5s cubic-bezier(0.4,0,0.2,1),
+              stroke 0.4s ease;
+}
+
+.gauge-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding-bottom: 12px;
+}
+
+.gauge-pct {
+  font-family: var(--head);
+  font-size: 2.4rem;
+  font-weight: 900;
+  color: var(--text-hi);
+  line-height: 1;
+  text-shadow: 0 0 20px currentColor;
+  transition: color 0.4s ease;
+}
+
+.gauge-label {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  color: var(--text-dim);
+  letter-spacing: 0.2em;
+  margin-top: 3px;
+}
+
+.gauge-ticks {
+  display: flex;
+  justify-content: space-between;
+  width: 200px;
+  margin-top: 4px;
+}
+
+.gauge-tick {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  color: var(--text-dim);
+}
+
+/* ── STATUS INDICATOR ────────────────────────────────────────────────── */
+.status-indicator {
+  width: 100%;
+  padding: 12px 20px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: background 0.4s ease, border-color 0.4s ease;
+  background: rgba(0,255,157,0.05);
+  border-color: var(--green-dim);
+  margin-top: 8px;
+}
+
+.status-icon {
+  font-size: 1.5rem;
+  width: 36px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.status-text-wrap .status-main {
+  font-family: var(--head);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--green);
+  letter-spacing: 0.2em;
+  transition: color 0.4s ease;
+}
+
+.status-text-wrap .status-sub {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+/* Status states */
+.status-indicator.safe   { background: rgba(0,255,157,0.05); border-color: var(--green-dim); }
+.status-indicator.alert  { background: rgba(255,184,0,0.07); border-color: var(--amber-dim);
+  animation: pulse-amber 1.5s ease-in-out infinite; }
+.status-indicator.drop   { background: rgba(255,34,68,0.08); border-color: var(--red-dim);
+  animation: pulse-red 0.8s ease-in-out infinite; }
+
+@keyframes pulse-amber {
+  0%,100% { box-shadow: 0 0 0 0 rgba(255,184,0,0.0); }
+  50% { box-shadow: 0 0 16px 2px rgba(255,184,0,0.2); }
+}
+@keyframes pulse-red {
+  0%,100% { box-shadow: 0 0 0 0 rgba(255,34,68,0.0); }
+  50% { box-shadow: 0 0 20px 4px rgba(255,34,68,0.3); }
+}
+
+/* ── MINI STATS ROW ──────────────────────────────────────────────────── */
+.mini-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  width: 100%;
+  margin-top: 14px;
+}
+
+.mini-stat {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.mini-stat-val {
+  font-family: var(--head);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--cyan);
+}
+
+.mini-stat-key {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  color: var(--text-dim);
+  letter-spacing: 0.12em;
+}
+
+/* ── INPUT SECTION ───────────────────────────────────────────────────── */
+.input-section {
+  padding: 16px;
+}
+
+.input-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.input-wrap {
+  flex: 1;
+  position: relative;
+}
+
+.input-label {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  color: var(--cyan-dim);
+  letter-spacing: 0.15em;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.text-input {
+  width: 100%;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-hi);
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  padding: 11px 14px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  resize: none;
+  line-height: 1.5;
+  letter-spacing: 0.03em;
+}
+
+.text-input:focus {
+  border-color: var(--cyan-dim);
+  box-shadow: 0 0 0 2px rgba(0,240,255,0.08);
+}
+
+.text-input::placeholder { color: var(--text-dim); }
+
+.btn-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  font-family: var(--head);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  padding: 9px 18px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.btn-primary {
+  background: var(--cyan);
+  color: #04060d;
+  box-shadow: 0 0 16px rgba(0,240,255,0.3);
+}
+.btn-primary:hover { background: #33f4ff; box-shadow: 0 0 24px rgba(0,240,255,0.5); }
+.btn-primary:active { transform: scale(0.97); }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+.btn-ghost:hover { border-color: var(--cyan-dim); color: var(--cyan); }
+
+.btn-danger {
+  background: transparent;
+  border: 1px solid var(--red-dim);
+  color: var(--red);
+}
+.btn-danger:hover { background: rgba(255,34,68,0.1); }
+
+.btn-mic {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  justify-content: center;
+  font-size: 1rem;
+}
+.btn-mic.recording {
+  border-color: var(--red);
+  color: var(--red);
+  animation: pulse-red 0.8s ease-in-out infinite;
+}
+
+/* ── SCENARIO BUTTONS ────────────────────────────────────────────────── */
+.scenario-section {
+  padding: 0 16px 14px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.scenario-label {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  color: var(--text-dim);
+  letter-spacing: 0.15em;
+  margin-bottom: 8px;
+}
+
+.scenario-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.scenario-pill {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  color: var(--text-dim);
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.05em;
+}
+.scenario-pill:hover {
+  border-color: var(--amber-dim);
+  color: var(--amber);
+  background: rgba(255,184,0,0.06);
+}
+
+/* ── CALL LOG ────────────────────────────────────────────────────────── */
+.call-log {
+  height: 320px;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  scroll-behavior: smooth;
+}
+
+.call-log::-webkit-scrollbar { width: 4px; }
+.call-log::-webkit-scrollbar-track { background: transparent; }
+.call-log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.log-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  border-left: 3px solid var(--border);
+  background: var(--bg2);
+  animation: slide-in 0.3s ease;
+}
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.log-entry.safe  { border-left-color: var(--green-dim); }
+.log-entry.alert { border-left-color: var(--amber); }
+.log-entry.drop  { border-left-color: var(--red); background: rgba(255,34,68,0.05); }
+
+.log-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.log-chunk {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  color: var(--text-dim);
+}
+
+.log-status-badge {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  padding: 1px 7px;
+  border-radius: 3px;
+  font-weight: bold;
+  letter-spacing: 0.1em;
+}
+.log-status-badge.safe  { background: rgba(0,255,157,0.1); color: var(--green); }
+.log-status-badge.alert { background: rgba(255,184,0,0.1); color: var(--amber); }
+.log-status-badge.drop  { background: rgba(255,34,68,0.15); color: var(--red); }
+
+.log-ct {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--cyan-dim);
+  margin-left: auto;
+}
+
+.log-text {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.log-keywords {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.kw-pill {
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  padding: 1px 6px;
+  border-radius: 2px;
+  letter-spacing: 0.08em;
+}
+.kw-pill.CRITICAL { background: rgba(255,34,68,0.15);  color: var(--red); }
+.kw-pill.HIGH     { background: rgba(255,184,0,0.12);  color: var(--amber); }
+.kw-pill.MEDIUM   { background: rgba(0,240,255,0.08);  color: var(--cyan-dim); }
+
+.log-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--text-dim);
+}
+
+.log-empty-icon { font-size: 2rem; opacity: 0.3; }
+.log-empty-text {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  opacity: 0.5;
+}
+
+/* ── RIGHT SIDEBAR ───────────────────────────────────────────────────── */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── LATENCY METER ───────────────────────────────────────────────────── */
+.latency-display {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.latency-val {
+  font-family: var(--head);
+  font-size: 2.6rem;
+  font-weight: 900;
+  color: var(--green);
+  text-shadow: 0 0 20px rgba(0,255,157,0.6);
+  line-height: 1;
+  letter-spacing: 0.05em;
+}
+
+.latency-unit {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  letter-spacing: 0.2em;
+}
+
+.latency-bar-track {
+  width: 100%;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.latency-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--green) 0%, var(--cyan) 100%);
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.4s ease;
+}
+
+.latency-threshold {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  color: var(--text-dim);
+  margin-top: 4px;
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+/* ── KEYWORD MONITOR ─────────────────────────────────────────────────── */
+.keyword-monitor {
+  padding: 12px 16px;
+}
+
+.kw-section { margin-bottom: 10px; }
+.kw-tier-label {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.15em;
+  margin-bottom: 5px;
+}
+.kw-tier-label.CRITICAL { color: var(--red); }
+.kw-tier-label.HIGH     { color: var(--amber); }
+.kw-tier-label.MEDIUM   { color: var(--cyan-dim); }
+
+.kw-detected-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-height: 24px;
+}
+
+.kw-detected-empty {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  opacity: 0.5;
+}
+
+/* ── SESSION INFO ────────────────────────────────────────────────────── */
+.session-info {
+  padding: 12px 16px;
+}
+
+.session-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+}
+.session-row:last-child { border-bottom: none; }
+
+.session-key {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+}
+
+.session-val {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  color: var(--text);
+}
+
+/* ── CONNECTION STATUS BAR ───────────────────────────────────────────── */
+.conn-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--bg2);
+  border-top: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+}
+
+.conn-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.conn-dot.connected    { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.conn-dot.connecting   { background: var(--amber); animation: pulse-dot 1s infinite; }
+.conn-dot.disconnected { background: var(--red); }
+
+.conn-bar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* ── DROP OVERLAY ────────────────────────────────────────────────────── */
+.drop-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(255,34,68,0.06);
+  border: 2px solid var(--red);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 9000;
+  pointer-events: none;
+}
+
+.drop-overlay.active { display: flex; animation: drop-flash 0.4s ease; }
+
+@keyframes drop-flash {
+  0%   { opacity: 0; }
+  30%  { opacity: 1; }
+  60%  { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+.drop-inner {
+  text-align: center;
+  padding: 32px 48px;
+  background: rgba(4,6,13,0.95);
+  border: 2px solid var(--red);
+  border-radius: var(--radius);
+  box-shadow: 0 0 60px rgba(255,34,68,0.4);
+}
+
+.drop-title {
+  font-family: var(--head);
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--red);
+  letter-spacing: 0.2em;
+  text-shadow: 0 0 20px var(--red);
+  animation: flicker 0.15s linear infinite;
+}
+
+@keyframes flicker {
+  0%,100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
+
+.drop-subtitle {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin-top: 8px;
+}
+
+/* ── UTILITIES ───────────────────────────────────────────────────────── */
+.sep { height: 1px; background: var(--border); margin: 0; }
+
+.grid-full { grid-column: 1 / -1; }
+
+@keyframes blink {
+  0%,100% { opacity: 1; } 50% { opacity: 0; }
+}
+.cursor::after {
+  content: '▮';
+  animation: blink 1s step-end infinite;
+  color: var(--cyan);
+  font-size: 0.8em;
+}
+</style>
+</head>
+
+<body>
+
+<!-- DROP OVERLAY -->
+<div class="drop-overlay" id="dropOverlay">
+  <div class="drop-inner">
+    <div class="drop-title">⚠ MALICIOUS CALL DETECTED</div>
+    <div class="drop-subtitle">AUTO-DROP THRESHOLD EXCEEDED · CT ≥ 0.80</div>
+  </div>
+</div>
+
+<div class="app-wrapper">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <svg class="logo-icon" viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="21,2 40,12 40,30 21,40 2,30 2,12" fill="none" stroke="#00f0ff" stroke-width="1.5" opacity="0.4"/>
+        <polygon points="21,7 36,15 36,27 21,35 6,27 6,15" fill="none" stroke="#00f0ff" stroke-width="1"/>
+        <path d="M14 16 L21 10 L28 16 L28 24 L21 30 L14 24 Z" fill="rgba(0,240,255,0.08)" stroke="#00f0ff" stroke-width="1.5"/>
+        <circle cx="21" cy="21" r="4" fill="#00f0ff" opacity="0.9"/>
+        <circle cx="21" cy="21" r="7" fill="none" stroke="#00f0ff" stroke-width="0.5" opacity="0.4"/>
+        <line x1="21" y1="2" x2="21" y2="7" stroke="#00f0ff" stroke-width="1" opacity="0.5"/>
+        <line x1="40" y1="12" x2="36" y2="15" stroke="#00f0ff" stroke-width="1" opacity="0.5"/>
+        <line x1="40" y1="30" x2="36" y2="27" stroke="#00f0ff" stroke-width="1" opacity="0.5"/>
+        <line x1="21" y1="40" x2="21" y2="35" stroke="#00f0ff" stroke-width="1" opacity="0.5"/>
+        <line x1="2" y1="30" x2="6" y2="27" stroke="#00f0ff" stroke-width="1" opacity="0.5"/>
+        <line x1="2" y1="12" x2="6" y2="15" stroke="#00f0ff" stroke-width="1" opacity="0.5"/>
+      </svg>
+      <div class="logo-text">
+        <h1>SCAMGUARD</h1>
+        <p>REAL-TIME VISHING DETECTION ENGINE v2.0</p>
+      </div>
+    </div>
+    <div class="header-status">
+      <div class="status-badge">
+        <div class="status-dot" id="engineDot"></div>
+        <span id="engineStatus">INITIALISING...</span>
+      </div>
+      <div class="model-tag" id="modelTag">LOADING</div>
+    </div>
+  </header>
+
+  <!-- MAIN GRID -->
+  <div class="grid-main">
+
+    <!-- COL 1: Gauge + Input + Log -->
+    <div style="display:flex;flex-direction:column;gap:16px;">
+
+      <!-- SUSPICION GAUGE + STATUS -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">THREAT SUSPICION METER</span>
+          <span class="panel-badge" id="chunkCounter">CHUNK: 0 / SESSION</span>
+        </div>
+        <div class="gauge-panel">
+
+          <div class="gauge-wrap">
+            <svg class="gauge-svg" viewBox="0 0 220 132">
+              <!-- Track arc: half circle from 180° to 0°, centre (110,110), r=98 -->
+              <path class="gauge-track"
+                d="M 12,110 A 98,98 0 0,1 208,110"
+                stroke-linecap="round"/>
+              <!-- Glow arc -->
+              <path class="gauge-glow" id="gaugeGlow"
+                d="M 12,110 A 98,98 0 0,1 208,110"
+                stroke-linecap="round"/>
+              <!-- Fill arc -->
+              <path class="gauge-fill" id="gaugeFill"
+                d="M 12,110 A 98,98 0 0,1 208,110"
+                stroke-linecap="round"/>
+            </svg>
+            <div class="gauge-center">
+              <div class="gauge-pct" id="gaugePct">0<span style="font-size:1.2rem">%</span></div>
+              <div class="gauge-label">CUMULATIVE THREAT (CT)</div>
+            </div>
+          </div>
+
+          <div class="gauge-ticks">
+            <span class="gauge-tick">0</span>
+            <span class="gauge-tick" style="color:var(--amber)">55</span>
+            <span class="gauge-tick" style="color:var(--red)">80</span>
+            <span class="gauge-tick">100</span>
+          </div>
+
+          <!-- Status indicator -->
+          <div class="status-indicator safe" id="statusIndicator">
+            <div class="status-icon" id="statusIcon">🛡️</div>
+            <div class="status-text-wrap">
+              <div class="status-main" id="statusMain">SAFE</div>
+              <div class="status-sub" id="statusSub">No threat detected · Monitoring active</div>
+            </div>
+          </div>
+
+          <!-- Mini stats -->
+          <div class="mini-stats">
+            <div class="mini-stat">
+              <div class="mini-stat-val" id="statConfidence">—</div>
+              <div class="mini-stat-key">NLP CONF %</div>
+            </div>
+            <div class="mini-stat">
+              <div class="mini-stat-val" id="statKwScore">—</div>
+              <div class="mini-stat-key">KW WEIGHT</div>
+            </div>
+            <div class="mini-stat">
+              <div class="mini-stat-val" id="statCT">0.000</div>
+              <div class="mini-stat-key">CT SCORE</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- INPUT -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">LIVE CALL SIMULATION</span>
+          <span class="panel-badge">TEXT · VOICE · SCENARIO</span>
+        </div>
+        <div class="input-section">
+          <label class="input-label">ENTER SENTENCE (simulating one spoken chunk):</label>
+          <div class="input-row">
+            <div class="input-wrap">
+              <textarea class="text-input" id="textInput" rows="2"
+                placeholder="e.g. Sir your HDFC account is blocked. Share your OTP immediately..."
+              ></textarea>
+            </div>
+            <button class="btn btn-mic" id="micBtn" title="Voice Input (Web Speech API)">🎤</button>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="analyzeBtn" disabled>
+              <span>▶</span> ANALYZE CHUNK
+            </button>
+            <button class="btn btn-ghost" id="resetBtn">↺ RESET SESSION</button>
+            <button class="btn btn-danger" id="clearLogBtn">✕ CLEAR LOG</button>
+          </div>
+        </div>
+        <div class="sep"></div>
+        <div class="scenario-section">
+          <div class="scenario-label">QUICK SCENARIOS (click to load):</div>
+          <div class="scenario-pills" id="scenarioPills"></div>
+        </div>
+      </div>
+
+      <!-- CALL LOG -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">ANALYSIS LOG</span>
+          <span class="panel-badge" id="logCount">0 ENTRIES</span>
+        </div>
+        <div class="call-log" id="callLog">
+          <div class="log-empty" id="logEmpty">
+            <div class="log-empty-icon">📡</div>
+            <div class="log-empty-text">AWAITING FIRST CHUNK<span class="cursor"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COL 2: Sidebar -->
+    <div class="sidebar">
+
+      <!-- LATENCY -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">NLP LATENCY</span>
+          <span class="panel-badge">EDGE INFERENCE</span>
+        </div>
+        <div class="latency-display">
+          <div class="latency-val" id="latencyVal">—</div>
+          <div class="latency-unit">MILLISECONDS / CHUNK</div>
+          <div class="latency-bar-track">
+            <div class="latency-bar-fill" id="latencyBar"></div>
+          </div>
+          <div class="latency-threshold">
+            <span>0ms</span>
+            <span style="color:var(--amber)">45ms</span>
+            <span>500ms</span>
+          </div>
+        </div>
+        <!-- Latency history sparkline -->
+        <div style="padding:0 16px 14px">
+          <svg id="sparkline" width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none">
+            <polyline id="sparkPoly" fill="none" stroke="var(--cyan)" stroke-width="1.5"
+              opacity="0.7" points=""/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- KEYWORD MONITOR -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">KEYWORD MONITOR</span>
+          <span class="panel-badge">TIERED HEURISTICS</span>
+        </div>
+        <div class="keyword-monitor">
+          <div class="kw-section">
+            <div class="kw-tier-label CRITICAL">⬛ CRITICAL (×3)</div>
+            <div class="kw-detected-list" id="kwCritical">
+              <span class="kw-detected-empty">none</span>
+            </div>
+          </div>
+          <div class="kw-section">
+            <div class="kw-tier-label HIGH">⬛ HIGH (×2)</div>
+            <div class="kw-detected-list" id="kwHigh">
+              <span class="kw-detected-empty">none</span>
+            </div>
+          </div>
+          <div class="kw-section">
+            <div class="kw-tier-label MEDIUM">⬛ MEDIUM (×1)</div>
+            <div class="kw-detected-list" id="kwMedium">
+              <span class="kw-detected-empty">none</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SESSION INFO -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">SESSION INFO</span>
+          <span class="panel-badge">METADATA</span>
+        </div>
+        <div class="session-info">
+          <div class="session-row">
+            <span class="session-key">SESSION ID</span>
+            <span class="session-val" id="sessionIdEl" style="font-size:0.55rem;color:var(--cyan-dim)">—</span>
+          </div>
+          <div class="session-row">
+            <span class="session-key">MODEL</span>
+            <span class="session-val" id="sessionModel">—</span>
+          </div>
+          <div class="session-row">
+            <span class="session-key">CHUNKS SENT</span>
+            <span class="session-val" id="sessionChunks">0</span>
+          </div>
+          <div class="session-row">
+            <span class="session-key">SCAM DETECTED</span>
+            <span class="session-val" id="sessionScam">0</span>
+          </div>
+          <div class="session-row">
+            <span class="session-key">AVG LATENCY</span>
+            <span class="session-val" id="sessionLatency">—</span>
+          </div>
+          <div class="session-row">
+            <span class="session-key">PROTOCOL</span>
+            <span class="session-val" style="color:var(--cyan-dim)">WebSocket</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- THRESHOLD REFERENCE -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">THRESHOLD REFERENCE</span>
+          <span class="panel-badge">α=0.4 λ=0.3</span>
+        </div>
+        <div class="session-info">
+          <div class="session-row">
+            <span class="session-key" style="color:var(--green)">● SAFE</span>
+            <span class="session-val">CT &lt; 0.55</span>
+          </div>
+          <div class="session-row">
+            <span class="session-key" style="color:var(--amber)">● ALERT</span>
+            <span class="session-val">CT ≥ 0.55</span>
+          </div>
+          <div class="session-row">
+            <span class="session-key" style="color:var(--red)">● AUTO-DROP</span>
+            <span class="session-val">CT ≥ 0.80</span>
+          </div>
+          <div class="session-row">
+            <span class="session-key">DECAY WINDOW</span>
+            <span class="session-val">10 chunks</span>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /sidebar -->
+  </div><!-- /grid-main -->
+</div><!-- /app-wrapper -->
+
+<!-- CONNECTION STATUS BAR -->
+<div class="conn-bar">
+  <div class="conn-dot connecting" id="connDot"></div>
+  <span id="connText">CONNECTING TO SCAMGUARD ENGINE...</span>
+  <div class="conn-bar-right">
+    <span id="connLatency"></span>
+    <span style="color:var(--border)">|</span>
+    <span>MANIPAL UNIVERSITY JAIPUR · SCAMGUARD v2.0</span>
+  </div>
+</div>
+
+<!-- padding for fixed footer -->
+<div style="height:36px"></div>
+
+<script>
+// =============================================================================
+//  SCAMGUARD FRONTEND — JavaScript Engine
+// =============================================================================
+
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+const WS_URL = `ws://${location.host}/ws/`;
+const REST_HEALTH = '/api/health';
+const GAUGE_ARC_LENGTH = 307.88; // Arc length for half-circle r=98: π*98 ≈ 307.88
+
+// ── SCENARIOS ─────────────────────────────────────────────────────────────────
+const SCENARIOS = [
+  { label: "Greeting (Safe)",      text: "Hello, how are you doing today?" },
+  { label: "HDFC Block",           text: "Sir your HDFC account has been blocked. Please share your OTP to unblock it immediately." },
+  { label: "Share OTP",            text: "plz share your otp" },
+  { label: "RBI Fraud",            text: "This is RBI calling. Your account shows suspicious activity. Please share your CVV and PIN to verify." },
+  { label: "KYC Expired",          text: "Your KYC has expired. Update now or your account will be permanently suspended." },
+  { label: "Lottery Win",          text: "Congratulations! You have won a lottery of 50 lakhs. Send your Aadhaar and PAN number." },
+  { label: "Customs Parcel",       text: "Your parcel is held at customs. Pay Rs 2000 clearance fee via UPI to release it." },
+  { label: "Tech Support",         text: "Microsoft technical support. Your computer has a virus. Please install AnyDesk immediately." },
+  { label: "Income Tax Arrest",    text: "Income tax department. A case is registered against you. Share your PIN to avoid arrest." },
+  { label: "Normal Call",          text: "Can you please send me the meeting notes from yesterday? I missed the call." },
+  { label: "Scam Escalation",      text: "Do not tell anyone about this call. Wire transfer Rs 50000 to this secure account urgently." },
+];
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let ws = null;
+let sessionId = generateUUID();
+let chunkCount = 0;
+let scamCount = 0;
+let latencyHistory = [];
+let currentCT = 0;
+let isDropped = false;
+let reconnectTimer = null;
+let isRecording = false;
+let speechRecog = null;
+
+// ── ELEMENTS ──────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const textInput   = $('textInput');
+const analyzeBtn  = $('analyzeBtn');
+const resetBtn    = $('resetBtn');
+const clearLogBtn = $('clearLogBtn');
+const micBtn      = $('micBtn');
+const callLog     = $('callLog');
+const logEmpty    = $('logEmpty');
+
+// =============================================================================
+//  GAUGE RENDERING
+// =============================================================================
+// The arc path: M 12,110 A 98,98 0 0,1 208,110
+// Total arc length ≈ π*98 = 307.88 px
+
+function setGauge(pct) {
+  pct = Math.max(0, Math.min(100, pct));
+  const fill = $('gaugeFill');
+  const glow  = $('gaugeGlow');
+  const pctEl = $('gaugePct');
+
+  const offset = GAUGE_ARC_LENGTH * (1 - pct / 100);
+  fill.style.strokeDashoffset = offset;
+  glow.style.strokeDashoffset = offset;
+
+  // Color transitions
+  let color;
+  if (pct < 55) {
+    color = 'var(--green)';
+  } else if (pct < 80) {
+    const t = (pct - 55) / 25;
+    color = `color-mix(in srgb, var(--amber) ${Math.round(t*100)}%, var(--green))`;
+  } else {
+    color = 'var(--red)';
+  }
+  fill.style.stroke = color;
+  glow.style.stroke = color;
+
+  // Percent text
+  pctEl.innerHTML = `${Math.round(pct)}<span style="font-size:1.2rem">%</span>`;
+  pctEl.style.color = pct < 55 ? 'var(--green)' : pct < 80 ? 'var(--amber)' : 'var(--red)';
+  pctEl.style.textShadow = `0 0 20px ${pct < 55 ? 'rgba(0,255,157,0.5)' : pct < 80 ? 'rgba(255,184,0,0.5)' : 'rgba(255,34,68,0.5)'}`;
+}
+
+// =============================================================================
+//  STATUS INDICATOR
+// =============================================================================
+function setStatus(status, nlpConf, ct) {
+  const ind  = $('statusIndicator');
+  const icon = $('statusIcon');
+  const main = $('statusMain');
+  const sub  = $('statusSub');
+
+  ind.className = 'status-indicator ' + status.toLowerCase();
+
+  if (status === 'SAFE') {
+    icon.textContent = '🛡️';
+    main.textContent = 'SAFE';
+    main.style.color = 'var(--green)';
+    sub.textContent = `NLP: ${nlpConf}% confidence · CT: ${ct.toFixed(3)}`;
+  } else if (status === 'ALERT') {
+    icon.textContent = '⚠️';
+    main.textContent = 'SUSPICIOUS — ALERT';
+    main.style.color = 'var(--amber)';
+    sub.textContent = `Threat building · CT: ${ct.toFixed(3)} ≥ 0.55 · Stay vigilant`;
+  } else if (status === 'DROP') {
+    icon.textContent = '🚨';
+    main.textContent = 'AUTO-DROP TRIGGERED';
+    main.style.color = 'var(--red)';
+    sub.textContent = `MALICIOUS CALL · CT: ${ct.toFixed(3)} ≥ 0.80 · Call should be terminated`;
+    triggerDropOverlay();
+  }
+}
+
+function triggerDropOverlay() {
+  if (isDropped) return;
+  isDropped = true;
+  $('dropOverlay').classList.add('active');
+  setTimeout(() => $('dropOverlay').classList.remove('active'), 4000);
+}
+
+// =============================================================================
+//  LATENCY SPARKLINE
+// =============================================================================
+function updateSparkline() {
+  const poly  = $('sparkPoly');
+  const max   = 500;
+  const h     = 40;
+  const hist  = latencyHistory.slice(-30);
+  if (hist.length < 2) return;
+
+  const pts = hist.map((v, i) => {
+    const x = (i / (hist.length - 1)) * 300;
+    const y = h - Math.min(v / max, 1) * (h - 4) - 2;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+
+  poly.setAttribute('points', pts);
+}
+
+function updateLatency(ms) {
+  latencyHistory.push(ms);
+  if (latencyHistory.length > 50) latencyHistory.shift();
+
+  $('latencyVal').textContent = ms < 10 ? ms.toFixed(2) : ms.toFixed(1);
+  $('latencyVal').style.color = ms < 45 ? 'var(--green)' : ms < 200 ? 'var(--amber)' : 'var(--red)';
+
+  // Bar: 0–500ms range
+  const pct = Math.min((ms / 500) * 100, 100);
+  $('latencyBar').style.width = pct + '%';
+
+  const avg = latencyHistory.reduce((a, b) => a + b, 0) / latencyHistory.length;
+  $('sessionLatency').textContent = avg.toFixed(1) + ' ms';
+  $('connLatency').textContent = `LATENCY: ${ms.toFixed(2)}ms`;
+
+  updateSparkline();
+}
+
+// =============================================================================
+//  KEYWORD MONITOR
+// =============================================================================
+function updateKeywords(matched) {
+  const buckets = { CRITICAL: [], HIGH: [], MEDIUM: [] };
+  (matched || []).forEach(k => {
+    const tier = k.tier || 'MEDIUM';
+    buckets[tier].push(k.word);
+  });
+
+  ['CRITICAL', 'HIGH', 'MEDIUM'].forEach(tier => {
+    const el = $(tier === 'CRITICAL' ? 'kwCritical' : tier === 'HIGH' ? 'kwHigh' : 'kwMedium');
+    if (buckets[tier].length === 0) {
+      el.innerHTML = '<span class="kw-detected-empty">none</span>';
+    } else {
+      el.innerHTML = buckets[tier].map(w =>
+        `<span class="kw-pill ${tier}">${w}</span>`
+      ).join('');
+    }
+  });
+}
+
+// =============================================================================
+//  CALL LOG
+// =============================================================================
+function addLogEntry(data) {
+  if (logEmpty) logEmpty.style.display = 'none';
+
+  const entry = document.createElement('div');
+  entry.className = `log-entry ${data.status.toLowerCase()}`;
+
+  const kwHtml = (data.matched_keywords || []).map(k =>
+    `<span class="kw-pill ${k.tier}">${k.word}</span>`
+  ).join('');
+
+  entry.innerHTML = `
+    <div class="log-meta">
+      <span class="log-chunk">#${data.chunk_number}</span>
+      <span class="log-status-badge ${data.status.toLowerCase()}">${data.status}</span>
+      ${data.is_scam ? '<span style="font-size:0.7rem">🚨</span>' : '<span style="font-size:0.7rem">✅</span>'}
+      <span class="log-ct">CT=${data.cumulative_ct} · ${data.latency_ms}ms</span>
+    </div>
+    <div class="log-text">${escapeHtml(data.text)}</div>
+    ${kwHtml ? `<div class="log-keywords">${kwHtml}</div>` : ''}
+  `;
+
+  callLog.appendChild(entry);
+  callLog.scrollTop = callLog.scrollHeight;
+
+  // Update log count
+  const count = callLog.querySelectorAll('.log-entry').length;
+  $('logCount').textContent = count + ' ENTRIES';
+}
+
+// =============================================================================
+//  PROCESS RESPONSE
+// =============================================================================
+function processResponse(data) {
+  currentCT = data.cumulative_ct;
+
+  // Gauge
+  setGauge(data.ct_percent);
+
+  // Status
+  setStatus(data.status, data.nlp_confidence, data.cumulative_ct);
+
+  // Mini stats
+  $('statConfidence').textContent = data.nlp_confidence.toFixed(1) + '%';
+  $('statKwScore').textContent    = data.keyword_weight;
+  $('statCT').textContent         = data.cumulative_ct.toFixed(3);
+
+  // Latency
+  updateLatency(data.latency_ms);
+
+  // Keywords
+  updateKeywords(data.matched_keywords);
+
+  // Session stats
+  chunkCount = data.chunk_number;
+  if (data.is_scam) scamCount++;
+  $('sessionChunks').textContent = chunkCount;
+  $('sessionScam').textContent   = scamCount;
+  $('chunkCounter').textContent  = `CHUNK: ${chunkCount} / SESSION`;
+  $('sessionModel').textContent  = (data.model || '').split('/').pop().slice(0, 20);
+
+  // Log entry
+  addLogEntry(data);
+}
+
+// =============================================================================
+//  WEBSOCKET
+// =============================================================================
+function connect() {
+  if (ws && ws.readyState === WebSocket.OPEN) return;
+
+  const url = WS_URL + sessionId;
+  setConnStatus('connecting', 'CONNECTING...');
+
+  try {
+    ws = new WebSocket(url);
+  } catch (e) {
+    setConnStatus('disconnected', 'WebSocket not supported');
+    return;
+  }
+
+  ws.onopen = () => {
+    setConnStatus('connected', 'SCAMGUARD ENGINE CONNECTED · SESSION: ' + sessionId.slice(0,8).toUpperCase());
+    analyzeBtn.disabled = false;
+
+    // Fetch health info
+    fetch(REST_HEALTH).then(r => r.json()).then(d => {
+      const m = d.model || 'unknown';
+      $('modelTag').textContent = m.split('/').pop().toUpperCase().slice(0, 22);
+      $('engineStatus').textContent = d.engine_loaded ? 'ENGINE ACTIVE' : 'DEMO MODE';
+      $('sessionModel').textContent = m.split('/').pop().slice(0, 20);
+    }).catch(() => {
+      $('modelTag').textContent = 'CONNECTED';
+      $('engineStatus').textContent = 'ENGINE ACTIVE';
+    });
+  };
+
+  ws.onmessage = (evt) => {
+    try {
+      const data = JSON.parse(evt.data);
+      if (data.type === 'analysis') processResponse(data);
+      if (data.type === 'reset_ack') resetUI();
+      if (data.type === 'pong') {} // keep-alive ack
+    } catch (e) {
+      console.error('WS parse error', e);
+    }
+  };
+
+  ws.onerror = () => {
+    setConnStatus('disconnected', 'CONNECTION ERROR — RETRYING...');
+  };
+
+  ws.onclose = () => {
+    analyzeBtn.disabled = true;
+    setConnStatus('disconnected', 'DISCONNECTED — RECONNECTING IN 3s...');
+    clearTimeout(reconnectTimer);
+    reconnectTimer = setTimeout(connect, 3000);
+  };
+}
+
+function sendChunk(text) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    setConnStatus('connecting', 'NOT CONNECTED — RECONNECTING...');
+    connect();
+    return;
+  }
+  ws.send(JSON.stringify({ type: 'chunk', text }));
+}
+
+function sendReset() {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'reset' }));
+  }
+}
+
+// Keep-alive ping every 20s
+setInterval(() => {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'ping' }));
+  }
+}, 20000);
+
+// =============================================================================
+//  UI HELPERS
+// =============================================================================
+function setConnStatus(state, text) {
+  const dot = $('connDot');
+  dot.className = 'conn-dot ' + state;
+  $('connText').textContent = text;
+}
+
+function resetUI() {
+  chunkCount = 0;
+  scamCount  = 0;
+  isDropped  = false;
+  latencyHistory = [];
+  currentCT = 0;
+
+  setGauge(0);
+  setStatus('SAFE', 0, 0);
+  $('statConfidence').textContent = '—';
+  $('statKwScore').textContent    = '—';
+  $('statCT').textContent         = '0.000';
+  $('latencyVal').textContent     = '—';
+  $('latencyBar').style.width     = '0%';
+  $('sessionChunks').textContent  = '0';
+  $('sessionScam').textContent    = '0';
+  $('sessionLatency').textContent = '—';
+  $('chunkCounter').textContent   = 'CHUNK: 0 / SESSION';
+  updateKeywords([]);
+  updateSparkline();
+}
+
+function clearLog() {
+  callLog.innerHTML = '';
+  logEmpty.style.display = '';
+  callLog.appendChild(logEmpty);
+  $('logCount').textContent = '0 ENTRIES';
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// =============================================================================
+//  SCENARIOS
+// =============================================================================
+function buildScenarioPills() {
+  const container = $('scenarioPills');
+  SCENARIOS.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'scenario-pill';
+    btn.textContent = s.label;
+    btn.onclick = () => {
+      textInput.value = s.text;
+      textInput.focus();
+    };
+    container.appendChild(btn);
+  });
+}
+
+// =============================================================================
+//  SPEECH RECOGNITION (Web Speech API)
+// =============================================================================
+function initSpeech() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    micBtn.title = 'Web Speech API not supported in this browser';
+    micBtn.style.opacity = '0.3';
+    return;
+  }
+
+  speechRecog = new SpeechRecognition();
+  speechRecog.continuous = false;
+  speechRecog.interimResults = true;
+  speechRecog.lang = 'en-IN';
+
+  speechRecog.onresult = (e) => {
+    const transcript = Array.from(e.results)
+      .map(r => r[0].transcript).join('');
+    textInput.value = transcript;
+
+    if (e.results[e.results.length - 1].isFinal) {
+      stopRecording();
+      // Auto-analyze on final result
+      if (transcript.trim()) sendChunk(transcript.trim());
+    }
+  };
+
+  speechRecog.onend = stopRecording;
+  speechRecog.onerror = stopRecording;
+}
+
+function startRecording() {
+  if (!speechRecog) return;
+  isRecording = true;
+  micBtn.classList.add('recording');
+  micBtn.textContent = '⏹';
+  speechRecog.start();
+}
+
+function stopRecording() {
+  isRecording = false;
+  micBtn.classList.remove('recording');
+  micBtn.textContent = '🎤';
+  try { speechRecog.stop(); } catch (e) {}
+}
+
+// =============================================================================
+//  EVENT LISTENERS
+// =============================================================================
+analyzeBtn.onclick = () => {
+  const text = textInput.value.trim();
+  if (!text) return;
+  sendChunk(text);
+  textInput.value = '';
+  textInput.focus();
+};
+
+textInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    analyzeBtn.click();
+  }
+});
+
+resetBtn.onclick = () => {
+  sessionId = generateUUID();
+  $('sessionIdEl').textContent = sessionId.slice(0,8).toUpperCase() + '...';
+  sendReset();
+  resetUI();
+  clearLog();
+
+  // Reconnect with new session
+  if (ws) ws.close();
+  setTimeout(connect, 200);
+};
+
+clearLogBtn.onclick = clearLog;
+
+micBtn.onclick = () => {
+  if (isRecording) stopRecording();
+  else startRecording();
+};
+
+// =============================================================================
+//  UTILITIES
+// =============================================================================
+function generateUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+
+// =============================================================================
+//  INIT
+// =============================================================================
+document.addEventListener('DOMContentLoaded', () => {
+  buildScenarioPills();
+  initSpeech();
+
+  $('sessionIdEl').textContent = sessionId.slice(0,8).toUpperCase() + '...';
+
+  // Start gauge at 0
+  setGauge(0);
+
+  // Connect WebSocket
+  connect();
+});
+</script>
+</body>
+</html>
