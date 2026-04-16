@@ -3,8 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ScamGuard v3.0 — Neural Vishing Defense</title>
-  
+  <meta name="description" content="ScamGuard v5.0 — Neural Defense Grid. AI-powered real-time vishing detection with cinematic holographic interface. Protect yourself from phone scams.">
+  <meta name="keywords" content="scam detection, vishing, AI security, phone fraud, OTP scam, India">
+  <meta name="author" content="Mohd Shaffan, Aditya Anurag Acharya, Shaqueeb Jamil">
+  <title>ScamGuard v5.0 — Neural Defense Grid</title>
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="ScamGuard v5.0 — AI Vishing Detection">
+  <meta property="og:description" content="Real-time AI-powered vishing detection system with cinematic holographic interface.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="/og-image.png">
+
+  <!-- Favicon (inline SVG shield) -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+
+  <!-- Security: CSP -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' ws: wss:; img-src 'self' data: blob:;">
+
   <!-- External Libraries -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,11 +27,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <style>
-    /* ================= THEME ENGINE & CSS VARIABLES ================= */
+    /* ═══════════════════ THEME ENGINE ═══════════════════ */
     :root {
-      /* Default Cyan Theme */
       --hue: 180;
       --color-primary: 0 255 255;
       --color-primary-dim: 0 150 150;
@@ -26,285 +41,686 @@
       --color-border: 50 70 100;
       --glow-intensity: 1;
       --anim-speed: 1;
-      
-      /* Derived Colors */
-      --glow-primary: 0 0 20px rgba(var(--color-primary), 0.4 * var(--glow-intensity));
-      --shadow-panel: 0 8px 32px rgba(0, 0, 0, 0.5);
-      
-      /* Typography */
+      --chromatic-offset: 0px;
+      --scanline-opacity: 0.04;
       --font-heading: 'Space Grotesk', sans-serif;
       --font-mono: 'JetBrains Mono', monospace;
       --font-body: 'Inter', sans-serif;
     }
+    [data-theme="emerald"]  { --hue:145; --color-primary:0 255 120; --color-primary-dim:0 150 80; --color-secondary:0 100 200; }
+    [data-theme="sentinel"] { --hue:340; --color-primary:255 50 80; --color-primary-dim:150 20 40; --color-secondary:100 20 200; }
+    [data-theme="amber"]    { --hue:45;  --color-primary:255 170 0; --color-primary-dim:180 100 0; --color-secondary:255 80 0; }
+    [data-theme="phantom"]  { --hue:270; --color-primary:160 80 255; --color-primary-dim:100 40 180; --color-secondary:80 0 200; }
+    [data-theme="devmode"]  { --hue:120; --color-primary:0 255 0; --color-primary-dim:0 180 0; --color-secondary:0 200 50; --color-bg:0 0 0; --color-panel:0 5 0; --color-border:0 60 0; }
 
-    /* Themes */
-    [data-theme="emerald"] {
-      --hue: 145; --color-primary: 0 255 120; --color-primary-dim: 0 150 80; --color-secondary: 0 100 200;
-    }
-    [data-theme="sentinel"] {
-      --hue: 340; --color-primary: 255 50 80; --color-primary-dim: 150 20 40; --color-secondary: 100 20 200;
-    }
-    [data-theme="amber"] {
-      --hue: 45; --color-primary: 255 170 0; --color-primary-dim: 180 100 0; --color-secondary: 255 80 0;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
-      background: radial-gradient(circle at center, #0a1220 0%, #000000 100%);
+      background: radial-gradient(ellipse at 30% 20%, #0a1628 0%, #020810 50%, #000000 100%);
       color: rgb(var(--color-primary));
       font-family: var(--font-body);
       overflow-x: hidden;
-      height: 100vh;
+      min-height: 100vh;
     }
 
-    /* ================= UI COMPONENTS ================= */
+    /* ═══════════════════ FOCUS INDICATORS (Accessibility) ═══════════════════ */
+    *:focus-visible {
+      outline: 2px solid rgb(var(--color-primary));
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+
+    /* ═══════════════════ CHROMATIC ABERRATION OVERLAY ═══════════════════ */
+    #chromatic-overlay {
+      position: fixed; inset: 0; z-index: 9999; pointer-events: none;
+      mix-blend-mode: screen;
+    }
+    #chromatic-overlay::before, #chromatic-overlay::after {
+      content: ''; position: absolute; inset: 0;
+      background: inherit; pointer-events: none;
+    }
+    #chromatic-overlay::before {
+      border-left: var(--chromatic-offset) solid rgba(255,0,0,0.15);
+      border-right: var(--chromatic-offset) solid transparent;
+      filter: blur(0.5px);
+    }
+    #chromatic-overlay::after {
+      border-right: var(--chromatic-offset) solid rgba(0,100,255,0.12);
+      border-left: var(--chromatic-offset) solid transparent;
+      filter: blur(0.5px);
+    }
+
+    /* ═══════════════════ SCANLINE OVERLAY ═══════════════════ */
+    #scanline-overlay {
+      position: fixed; inset: 0; z-index: 9998; pointer-events: none;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,var(--scanline-opacity)) 2px, rgba(0,0,0,var(--scanline-opacity)) 4px);
+    }
+
+    /* ═══════════════════ GLASS PANELS ═══════════════════ */
     .glass-panel {
-      background: rgba(var(--color-panel), 0.65);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(var(--color-border), 0.4);
-      box-shadow: var(--shadow-panel);
+      background: rgba(var(--color-panel), 0.55);
+      backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+      border: 1px solid rgba(var(--color-border), 0.3);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6), inset 0 1px 0 rgba(var(--color-primary),0.05);
       transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
     .glass-panel:hover {
-      border-color: rgba(var(--color-primary), 0.6);
-      box-shadow: 0 10px 40px rgba(var(--color-primary), 0.15);
+      border-color: rgba(var(--color-primary), 0.4);
+      box-shadow: 0 12px 48px rgba(var(--color-primary), 0.08), inset 0 1px 0 rgba(var(--color-primary),0.1);
     }
 
-    /* Text & Typography */
     .text-primary { color: rgb(var(--color-primary)); text-shadow: 0 0 8px rgba(var(--color-primary), 0.6); }
-    .text-primary-glow { text-shadow: 0 0 calc(15px * var(--glow-intensity)) rgb(var(--color-primary)); }
+    .text-primary-glow { text-shadow: 0 0 20px rgb(var(--color-primary)), 0 0 40px rgba(var(--color-primary),0.3); }
     .text-dim { color: rgb(var(--color-primary-dim)); }
     .font-heading { font-family: var(--font-heading); }
     .font-mono { font-family: var(--font-mono); }
-    
-    /* Scanline Overlay */
-    .scanlines::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.1) 2px, rgba(0,0,0,0.1) 4px);
-      pointer-events: none;
-      z-index: 10;
-    }
 
-    /* Buttons */
+    /* ═══════════════════ BUTTONS ═══════════════════ */
     .btn-interactive {
-      position: relative;
-      overflow: hidden;
-      transition: all 0.2s ease;
-      background: rgba(var(--color-primary), 0.1);
-      border: 1px solid rgba(var(--color-primary), 0.4);
+      position: relative; overflow: hidden; transition: all 0.2s ease;
+      background: rgba(var(--color-primary), 0.08);
+      border: 1px solid rgba(var(--color-primary), 0.3);
+      color: rgb(var(--color-primary)); cursor: pointer;
     }
     .btn-interactive:hover {
-      background: rgba(var(--color-primary), 0.25);
-      box-shadow: 0 0 calc(12px * var(--glow-intensity)) rgba(var(--color-primary), 0.4);
+      background: rgba(var(--color-primary), 0.2);
+      box-shadow: 0 0 20px rgba(var(--color-primary), 0.3), inset 0 0 20px rgba(var(--color-primary), 0.05);
       transform: translateY(-1px);
     }
     .btn-interactive:active { transform: scale(0.96); }
+    .btn-interactive:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
 
-    /* Shockwave Ripple */
+    /* ═══════════════════ LIQUID THREAT METER ═══════════════════ */
+    .threat-meter-track {
+      position: relative; width: 100%; height: 2.2rem;
+      background: rgba(0,0,0,0.5); border-radius: 9999px; overflow: hidden;
+      border: 1px solid rgba(var(--color-border), 0.3);
+    }
+    .threat-meter-fill {
+      height: 100%; width: 0%; border-radius: 9999px;
+      background: linear-gradient(90deg, #10b981, #eab308, #f97316, #ef4444, #dc2626);
+      transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+      position: relative;
+      box-shadow: 0 0 20px rgba(var(--color-primary), 0.4);
+    }
+    .threat-meter-fill::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.15) 50%, transparent 100%);
+      animation: meter-shimmer 2.5s ease-in-out infinite;
+    }
+    @keyframes meter-shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(200%); } }
+    .threat-meter-fill::before {
+      content: ''; position: absolute; right: -8px; top: -4px;
+      width: 20px; height: calc(100% + 8px);
+      background: inherit; border-radius: 50%; filter: blur(4px);
+      animation: blob-pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes blob-pulse { 0%, 100% { transform: scaleX(1) scaleY(1); } 50% { transform: scaleX(1.3) scaleY(0.8); } }
+
+    /* ═══════════════════ SHOCKWAVE ═══════════════════ */
     .shockwave {
-      position: fixed;
-      top: 50%; left: 50%;
-      width: 0; height: 0;
-      border-radius: 50%;
+      position: fixed; top: 50%; left: 50%;
+      width: 0; height: 0; border-radius: 50%;
       background: radial-gradient(circle, rgba(var(--color-primary), 0.3) 0%, transparent 70%);
-      transform: translate(-50%, -50%);
-      pointer-events: none;
-      z-index: 5;
+      transform: translate(-50%, -50%); pointer-events: none; z-index: 5;
     }
 
-    /* Settings Panel */
-    #settings-panel {
-      transform: translateX(110%);
-      transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    /* ═══════════════════ DROP OVERLAY ═══════════════════ */
+    #drop-overlay {
+      display: none; position: fixed; inset: 0; z-index: 200;
+      background: rgba(180, 10, 30, 0.15);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; pointer-events: all;
     }
+    #drop-overlay.visible { display: flex; }
+    .drop-box {
+      background: rgba(10, 2, 5, 0.95); border: 2px solid rgba(255, 30, 60, 0.8);
+      border-radius: 1rem; padding: 3rem;
+      box-shadow: 0 0 80px rgba(255, 30, 60, 0.4), inset 0 0 40px rgba(255,0,0,0.05);
+      animation: glitch-skew 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) 2;
+    }
+
+    /* ═══════════════════ SETTINGS PANEL ═══════════════════ */
+    #settings-panel { transform: translateX(110%); transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
     #settings-panel.open { transform: translateX(0); }
 
-    /* Inputs & Sliders */
+    /* ═══════════════════ INPUTS ═══════════════════ */
     input[type="range"] {
-      -webkit-appearance: none;
+      -webkit-appearance: none; appearance: none;
       background: rgba(var(--color-border), 0.3);
-      height: 6px;
-      border-radius: 3px;
-      outline: none;
+      height: 6px; border-radius: 3px; outline: none;
     }
     input[type="range"]::-webkit-slider-thumb {
-      -webkit-appearance: none;
+      -webkit-appearance: none; appearance: none;
       width: 16px; height: 16px;
-      background: rgb(var(--color-primary));
-      border-radius: 50%;
-      cursor: pointer;
+      background: rgb(var(--color-primary)); border-radius: 50%; cursor: pointer;
       box-shadow: 0 0 10px rgb(var(--color-primary));
     }
     input[type="range"]::-moz-range-thumb {
       width: 16px; height: 16px;
-      background: rgb(var(--color-primary));
-      border-radius: 50%;
-      cursor: pointer;
-      border: none;
+      background: rgb(var(--color-primary)); border-radius: 50%; cursor: pointer; border: none;
     }
 
-    /* Log Typewriter Cursor */
+    /* ═══════════════════ TYPEWRITER LOG ═══════════════════ */
     .typewriter-cursor::after {
-      content: '█';
-      animation: blink 0.8s step-end infinite;
-      color: rgb(var(--color-primary));
-      margin-left: 2px;
+      content: '\2588'; animation: blink 0.7s step-end infinite;
+      color: rgb(var(--color-primary)); margin-left: 2px;
     }
-    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+    @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0;} }
 
-    /* Scrollbar */
-    ::-webkit-scrollbar { width: 6px; }
+    /* ═══════════════════ KEYWORD HIGHLIGHT ═══════════════════ */
+    .kw-critical { background: rgba(255,50,80,0.25); color: #ff6b7a; padding: 1px 4px; border-radius: 3px; font-weight: 600; border-bottom: 2px solid #ff3250; }
+    .kw-high { background: rgba(255,170,0,0.2); color: #ffbb33; padding: 1px 4px; border-radius: 3px; border-bottom: 2px solid #ffaa00; }
+    .kw-medium { background: rgba(0,150,255,0.15); color: #60a5fa; padding: 1px 4px; border-radius: 3px; border-bottom: 1px solid #3b82f6; }
+
+    /* ═══════════════════ SKELETON LOADER ═══════════════════ */
+    .skeleton-loader {
+      background: linear-gradient(90deg, rgba(var(--color-panel),0.4) 25%, rgba(var(--color-primary),0.06) 50%, rgba(var(--color-panel),0.4) 75%);
+      background-size: 200% 100%;
+      animation: skeleton-shimmer 1.5s ease-in-out infinite;
+      border-radius: 6px;
+    }
+    @keyframes skeleton-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    /* ═══════════════════ SCROLLBAR ═══════════════════ */
+    ::-webkit-scrollbar { width: 5px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(var(--color-primary), 0.3); border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(var(--color-primary), 0.6); }
+    ::-webkit-scrollbar-thumb { background: rgba(var(--color-primary), 0.2); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(var(--color-primary), 0.5); }
 
-    /* Glitch Overlay */
-    .glitch-active {
-      animation: glitch-skew 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both infinite;
-      color: rgb(var(--color-primary));
-    }
+    /* ═══════════════════ ANIMATIONS ═══════════════════ */
     @keyframes glitch-skew {
-      0% { transform: translate(0); }
-      20% { transform: translate(-2px, 2px); }
-      40% { transform: translate(-2px, -2px); }
-      60% { transform: translate(2px, 2px); }
-      80% { transform: translate(2px, -2px); }
-      100% { transform: translate(0); }
+      0% { transform: translate(0); } 20% { transform: translate(-3px, 2px); }
+      40% { transform: translate(-2px, -3px); } 60% { transform: translate(3px, 1px); }
+      80% { transform: translate(2px, -2px); } 100% { transform: translate(0); }
+    }
+    .glitch-active { animation: glitch-skew 0.3s cubic-bezier(0.25,0.46,0.45,0.94) both infinite; }
+
+    @keyframes body-shake {
+      0%,100% { transform: translate(0,0) rotate(0deg); }
+      10% { transform: translate(-5px,-3px) rotate(-0.5deg); }
+      30% { transform: translate(5px,3px) rotate(0.5deg); }
+      50% { transform: translate(-3px,-5px) rotate(-0.3deg); }
+      70% { transform: translate(3px,5px) rotate(0.3deg); }
+      90% { transform: translate(-1px,-1px) rotate(0deg); }
+    }
+    body.shake-active { animation: body-shake 0.6s cubic-bezier(0.36,0.07,0.19,0.97) both; }
+
+    @keyframes vis { 0%,100% { height: 4px; } 50% { height: 100%; } }
+
+    @keyframes float-up {
+      0% { transform: translateY(100vh) scale(0); opacity: 0; }
+      10% { opacity: 1; } 90% { opacity: 0.8; }
+      100% { transform: translateY(-20vh) scale(1); opacity: 0; }
+    }
+    .boot-particle {
+      position: fixed; width: 3px; height: 3px;
+      background: rgb(var(--color-primary));
+      border-radius: 50%; pointer-events: none; z-index: 998;
+      box-shadow: 0 0 8px rgb(var(--color-primary));
     }
 
-    /* Canvas Background */
-    #canvas-bg { position: fixed; top: 0; left: 0; z-index: -1; pointer-events: none; }
+    @keyframes threat-pulse {
+      0% { box-shadow: 0 0 0 0 rgba(255,50,80,0.4); }
+      70% { box-shadow: 0 0 0 15px rgba(255,50,80,0); }
+      100% { box-shadow: 0 0 0 0 rgba(255,50,80,0); }
+    }
+    .threat-pulse { animation: threat-pulse 1.5s ease-out; }
 
-    /* Boot Overlay */
-    #boot-overlay {
-      background: #000;
-      z-index: 999;
+    .scan-line {
+      position: absolute; top: 0; left: 0;
+      height: 2px; width: 0;
+      background: linear-gradient(90deg, transparent, rgb(var(--color-primary)), transparent);
+      box-shadow: 0 0 15px rgb(var(--color-primary));
+      z-index: 20; transition: width 0.3s ease-out;
     }
 
-    /* Confidence Ring */
+    .counter-animate { transition: all 0.5s cubic-bezier(0.34,1.56,0.64,1); }
+    .counter-animate.flash { transform: scale(1.3); text-shadow: 0 0 20px currentColor; }
+
+    /* ═══════════════════ CONFIDENCE RING ═══════════════════ */
     .confidence-ring {
-      background: conic-gradient(
-        rgb(var(--color-primary)) var(--ring-pct, 0%),
-        rgba(var(--color-primary), 0.1) 0%
-      );
+      background: conic-gradient(rgb(var(--color-primary)) var(--ring-pct, 0%), rgba(var(--color-primary),0.08) 0%);
       transition: background 0.8s ease-out;
     }
+    .donut-text { background: rgba(var(--color-bg), 0.9); backdrop-filter: blur(4px); }
 
-    /* Donut Chart Center Text */
-    .donut-text {
-      background: rgba(var(--color-bg), 0.9);
-      backdrop-filter: blur(4px);
+    /* ═══════════════════ RADAR SCANNER ═══════════════════ */
+    .radar-container { position: relative; width: 120px; height: 120px; }
+    .radar-sweep {
+      position: absolute; inset: 0; border-radius: 50%;
+      background: conic-gradient(from 0deg, transparent 0deg, rgba(var(--color-primary),0.3) 30deg, transparent 60deg);
+      animation: radar-spin 3s linear infinite;
+    }
+    @keyframes radar-spin { to { transform: rotate(360deg); } }
+    .radar-rings {
+      position: absolute; inset: 0; border-radius: 50%;
+      border: 1px solid rgba(var(--color-primary), 0.15);
+    }
+    .radar-rings::before {
+      content: ''; position: absolute; inset: 25%;
+      border-radius: 50%; border: 1px solid rgba(var(--color-primary), 0.12);
+    }
+    .radar-rings::after {
+      content: ''; position: absolute; inset: 50%;
+      border-radius: 50%; border: 1px solid rgba(var(--color-primary), 0.1);
+      width: 1px; height: 1px;
+    }
+    .radar-dot {
+      position: absolute; width: 6px; height: 6px;
+      background: rgb(var(--color-primary)); border-radius: 50%;
+      box-shadow: 0 0 8px rgb(var(--color-primary));
+      opacity: 0; transition: opacity 0.3s;
+    }
+    .radar-dot.active { opacity: 1; animation: radar-blink 1.5s ease-out infinite; }
+    @keyframes radar-blink { 0%{transform:scale(1);opacity:1;} 100%{transform:scale(2);opacity:0;} }
+
+    /* ═══════════════════ SPARKLINE ═══════════════════ */
+    .sparkline-container {
+      position: relative; height: 60px; width: 100%;
+      overflow: hidden; border-radius: 6px;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid rgba(var(--color-border), 0.15);
+    }
+
+    /* ═══════════════════ HEATMAP ═══════════════════ */
+    .heatmap-bar { display: flex; gap: 2px; height: 20px; }
+    .heatmap-cell {
+      flex: 1; border-radius: 2px;
+      background: rgba(var(--color-primary), 0.05);
+      transition: background 0.5s, box-shadow 0.5s; min-width: 4px;
+    }
+
+    /* ═══════════════════ NEURAL NET VIZ ═══════════════════ */
+    .neural-node { fill: rgb(var(--color-primary)); filter: drop-shadow(0 0 4px rgba(var(--color-primary),0.6)); }
+    .neural-link { stroke: rgba(var(--color-primary), 0.15); stroke-width: 1; }
+    .neural-link.active { stroke: rgba(var(--color-primary), 0.8); stroke-width: 2; filter: drop-shadow(0 0 3px rgba(var(--color-primary),0.6)); }
+
+    /* ═══════════════════ TOAST SYSTEM ═══════════════════ */
+    #toast-container {
+      position: fixed; top: 1rem; right: 1rem; z-index: 300;
+      display: flex; flex-direction: column; gap: 0.5rem; pointer-events: none;
+    }
+    .toast {
+      padding: 0.75rem 1.25rem; border-radius: 0.5rem;
+      font-family: var(--font-mono); font-size: 0.75rem;
+      backdrop-filter: blur(12px); border: 1px solid rgba(var(--color-border), 0.4);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      transform: translateX(120%);
+      transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1), opacity 0.3s;
+      pointer-events: auto; max-width: 350px;
+    }
+    .toast.show { transform: translateX(0); }
+    .toast.hide { transform: translateX(120%); opacity: 0; }
+    .toast-info { background: rgba(0,150,255,0.15); border-color: rgba(0,150,255,0.3); color: #60a5fa; }
+    .toast-warn { background: rgba(255,170,0,0.15); border-color: rgba(255,170,0,0.3); color: #fbbf24; }
+    .toast-danger { background: rgba(255,50,80,0.15); border-color: rgba(255,50,80,0.3); color: #f87171; }
+    .toast-success { background: rgba(0,255,120,0.15); border-color: rgba(0,255,120,0.3); color: #4ade80; }
+
+    /* ═══════════════════ COMMAND PALETTE ═══════════════════ */
+    #command-palette {
+      display: none; position: fixed; inset: 0; z-index: 400;
+      background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);
+      align-items: flex-start; justify-content: center; padding-top: 15vh;
+    }
+    #command-palette.open { display: flex; }
+    .palette-box {
+      width: 500px; max-width: 90vw;
+      background: rgba(10,15,25,0.95);
+      border: 1px solid rgba(var(--color-primary),0.3);
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 30px rgba(var(--color-primary),0.1);
+      overflow: hidden;
+    }
+    .palette-input {
+      width: 100%; background: transparent;
+      border: none; border-bottom: 1px solid rgba(var(--color-border),0.3);
+      padding: 1rem 1.25rem; font-family: var(--font-mono); font-size: 0.9rem;
+      color: white; outline: none;
+    }
+    .palette-input::placeholder { color: rgba(255,255,255,0.3); }
+    .palette-results { max-height: 300px; overflow-y: auto; }
+    .palette-item {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.75rem 1.25rem; cursor: pointer;
+      transition: background 0.15s;
+      border-bottom: 1px solid rgba(var(--color-border),0.1);
+    }
+    .palette-item:hover, .palette-item.active { background: rgba(var(--color-primary),0.1); }
+    .palette-item .icon { font-size: 1.1rem; width: 1.5rem; text-align: center; }
+    .palette-item .label { flex: 1; font-size: 0.8rem; color: #e0e0e0; }
+    .palette-item .shortcut {
+      font-family: var(--font-mono); font-size: 0.65rem;
+      color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.05);
+      padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    /* ═══════════════════ SHORTCUTS OVERLAY ═══════════════════ */
+    #shortcuts-overlay {
+      display: none; position: fixed; inset: 0; z-index: 350;
+      background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);
+      align-items: center; justify-content: center;
+    }
+    #shortcuts-overlay.open { display: flex; }
+    .shortcuts-box {
+      background: rgba(10,15,25,0.95); border: 1px solid rgba(var(--color-primary),0.3);
+      border-radius: 12px; padding: 2rem; max-width: 500px; width: 90vw;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+    }
+    .shortcut-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0.5rem 0; border-bottom: 1px solid rgba(var(--color-border),0.15);
+    }
+    .shortcut-row:last-child { border-bottom: none; }
+    .key-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-family: var(--font-mono); font-size: 0.7rem;
+      color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.08);
+      padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.15);
+    }
+
+    /* ═══════════════════ VOICE INDICATOR ═══════════════════ */
+    #voice-indicator {
+      position: fixed; bottom: 6rem; left: 50%; transform: translateX(-50%);
+      z-index: 100; display: none; align-items: center; gap: 0.75rem;
+      padding: 0.75rem 1.5rem; border-radius: 9999px;
+      background: rgba(var(--color-primary), 0.1);
+      border: 1px solid rgba(var(--color-primary), 0.4);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 0 30px rgba(var(--color-primary), 0.2);
+      animation: voice-glow 2s ease-in-out infinite;
+    }
+    #voice-indicator.active { display: flex; }
+    @keyframes voice-glow { 0%,100% { box-shadow: 0 0 20px rgba(var(--color-primary),0.2); } 50% { box-shadow: 0 0 40px rgba(var(--color-primary),0.4); } }
+    .voice-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: rgb(var(--color-primary));
+      animation: voice-dot-pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes voice-dot-pulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.4); opacity: 0.6; } }
+
+    /* ═══════════════════ CONFUSION MATRIX (EASTER EGG) ═══════════════════ */
+    #confusion-matrix {
+      display: none; position: fixed; bottom: 1rem; left: 1rem;
+      z-index: 100; padding: 1rem;
+      background: rgba(0,10,0,0.95); border: 1px solid rgba(0,255,0,0.3);
+      border-radius: 8px; font-family: var(--font-mono); font-size: 0.7rem;
+      color: #0f0; box-shadow: 0 0 20px rgba(0,255,0,0.1);
+    }
+    #confusion-matrix.visible { display: block; }
+    .cm-cell {
+      display: inline-block; width: 3rem; height: 2rem;
+      line-height: 2rem; text-align: center; margin: 1px;
+      border: 1px solid rgba(0,255,0,0.2);
+    }
+
+    /* ═══════════════════ HISTORY PANEL ═══════════════════ */
+    #history-panel {
+      display: none; position: fixed; top: 0; left: 0; height: 100%; width: 320px;
+      background: rgba(5,8,15,0.98); border-right: 1px solid rgba(var(--color-border),0.3);
+      z-index: 50; overflow-y: auto; padding: 1.5rem;
+      transform: translateX(-110%); transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    #history-panel.open { display: block; transform: translateX(0); }
+    .history-item {
+      padding: 0.75rem; margin-bottom: 0.5rem; border-radius: 8px; cursor: pointer;
+      background: rgba(var(--color-panel),0.5); border: 1px solid rgba(var(--color-border),0.2);
+      transition: all 0.2s;
+    }
+    .history-item:hover { border-color: rgba(var(--color-primary),0.4); background: rgba(var(--color-primary),0.05); }
+
+    /* ═══════════════════ CANVAS BG ═══════════════════ */
+    #canvas-bg { position: fixed; top: 0; left: 0; z-index: -1; pointer-events: none; }
+
+    /* ═══════════════════ BOOT OVERLAY ═══════════════════ */
+    #boot-overlay { background: #000; z-index: 999; }
+
+    /* ═══════════════════ RESPONSIVE ═══════════════════ */
+    @media (max-width: 1024px) {
+      .glass-panel { padding: 1rem !important; }
+      .grid-cols-12, main { display: flex; flex-direction: column; gap: 1rem; }
+      #dashboard { padding: 0.5rem; }
+      header { flex-wrap: wrap; gap: 0.5rem; }
+      .btn-interactive { padding-left: 1rem; padding-right: 1rem; font-size: 0.7rem; }
+      #settings-panel { width: 100% !important; max-width: 300px; }
+    }
+    @media (max-width: 640px) {
+      h1 { font-size: 1.2rem; }
+      .confidence-ring { width: 8rem; height: 8rem; }
+      .donut-text { width: 6rem; height: 6rem; }
+      #log-container { max-height: 200px; }
+      .radar-container { width: 80px; height: 80px; }
     }
   </style>
 </head>
 <body class="antialiased selection:bg-cyan-500 selection:text-black">
 
-  <!-- Three.js Background -->
-  <div id="canvas-bg" class="scanlines"></div>
+  <!-- Overlays -->
+  <div id="chromatic-overlay" aria-hidden="true"></div>
+  <div id="scanline-overlay" aria-hidden="true"></div>
+  <div id="canvas-bg" aria-hidden="true"></div>
+  <div id="glitch-layer" class="fixed inset-0 z-50 pointer-events-none opacity-0 mix-blend-color-dodge" aria-hidden="true"></div>
 
-  <!-- Glitch Layer -->
-  <div id="glitch-layer" class="fixed inset-0 z-50 pointer-events-none opacity-0 mix-blend-color-dust"></div>
+  <!-- Toast Container -->
+  <div id="toast-container" role="status" aria-live="polite" aria-label="Notifications"></div>
 
-  <!-- Shockwave Element -->
-  <div id="shockwave-el" class="shockwave"></div>
-
-  <!-- Boot Screen -->
-  <div id="boot-overlay" class="fixed inset-0 flex flex-col items-center justify-center text-center cursor-pointer">
-    <h1 class="text-5xl md:text-7xl font-heading font-bold tracking-[0.2em] mb-6 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600 animate-pulse">SCAMGUARD</h1>
-    <div id="boot-log" class="h-24 font-mono text-sm text-gray-500 w-72 mb-8 overflow-hidden"></div>
-    <div class="text-xs tracking-[0.3em] text-gray-600 animate-bounce font-mono">CLICK TO INITIALIZE NEURAL LINK</div>
+  <!-- Voice Indicator -->
+  <div id="voice-indicator" role="status" aria-label="Voice mode active">
+    <div class="voice-dot"></div>
+    <span class="text-xs font-mono text-primary" id="voice-status">LISTENING...</span>
   </div>
 
-  <!-- Main Dashboard -->
+  <!-- Confusion Matrix (Easter Egg) -->
+  <div id="confusion-matrix" role="complementary" aria-label="Developer confusion matrix">
+    <div class="text-xs mb-2 text-green-300 font-bold">CONFUSION MATRIX (Last 10)</div>
+    <div id="cm-grid"></div>
+    <div id="cm-stats" class="mt-1 text-[10px] opacity-80"></div>
+  </div>
+
+  <!-- DROP Overlay -->
+  <div id="drop-overlay" role="alertdialog" aria-label="Call terminated">
+    <div class="drop-box">
+      <div class="text-7xl mb-4" style="filter:drop-shadow(0 0 30px rgba(255,30,60,0.8));">&#x1F6A8;</div>
+      <h2 class="text-3xl font-heading font-bold text-red-400 tracking-widest mb-2 glitch-active">CALL TERMINATED</h2>
+      <p class="text-sm font-mono text-gray-400 mb-1">Malicious intent confirmed &mdash; auto-drop executed</p>
+      <p id="drop-reason" class="text-xs font-mono text-red-300 mb-6 opacity-80"></p>
+      <button onclick="dismissDrop()" aria-label="Dismiss alert and reset session"
+        class="px-8 py-2 rounded border border-red-500/50 text-red-400 text-xs font-bold tracking-widest hover:bg-red-900/30 transition-colors cursor-pointer">
+        DISMISS &amp; RESET SESSION
+      </button>
+    </div>
+  </div>
+
+  <!-- Shockwave -->
+  <div id="shockwave-el" class="shockwave" aria-hidden="true"></div>
+
+  <!-- Command Palette -->
+  <div id="command-palette" role="dialog" aria-label="Command palette">
+    <div class="palette-box">
+      <input id="palette-input" class="palette-input" placeholder="Type a command..." autocomplete="off" aria-label="Search commands">
+      <div id="palette-results" class="palette-results" role="listbox"></div>
+    </div>
+  </div>
+
+  <!-- Shortcuts Overlay -->
+  <div id="shortcuts-overlay" role="dialog" aria-label="Keyboard shortcuts">
+    <div class="shortcuts-box">
+      <h2 class="text-lg font-heading font-bold text-white mb-4 flex justify-between items-center">
+        Keyboard Shortcuts
+        <button onclick="toggleShortcuts()" class="text-gray-500 hover:text-white text-sm cursor-pointer" aria-label="Close shortcuts">&#x2715;</button>
+      </h2>
+      <div class="space-y-1">
+        <div class="shortcut-row"><span class="text-sm text-gray-300">Analyze text</span><span class="key-badge">Ctrl + Enter</span></div>
+        <div class="shortcut-row"><span class="text-sm text-gray-300">Command palette</span><span class="key-badge">Ctrl + K</span></div>
+        <div class="shortcut-row"><span class="text-sm text-gray-300">Toggle mic</span><span class="key-badge">Ctrl + M</span></div>
+        <div class="shortcut-row"><span class="text-sm text-gray-300">Reset session</span><span class="key-badge">Ctrl + R</span></div>
+        <div class="shortcut-row"><span class="text-sm text-gray-300">Export report</span><span class="key-badge">Ctrl + E</span></div>
+        <div class="shortcut-row"><span class="text-sm text-gray-300">Settings</span><span class="key-badge">Ctrl + S</span></div>
+        <div class="shortcut-row"><span class="text-sm text-gray-300">Voice mode</span><span class="key-badge">Ctrl + V</span></div>
+        <div class="shortcut-row"><span class="text-sm text-gray-300">Analysis history</span><span class="key-badge">Ctrl + H</span></div>
+        <div class="shortcut-row"><span class="text-sm text-gray-300">Show shortcuts</span><span class="key-badge">?</span></div>
+        <div class="shortcut-row"><span class="text-sm text-gray-300">Scenarios 1-4</span><span class="key-badge">1 2 3 4</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- History Panel -->
+  <div id="history-panel" role="complementary" aria-label="Analysis history">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-lg font-heading font-bold text-white">History</h2>
+      <div class="flex gap-2">
+        <button onclick="clearHistory()" class="text-[10px] px-2 py-1 rounded bg-red-900/30 text-red-400 border border-red-800/50 cursor-pointer hover:bg-red-900/50" aria-label="Clear history">CLEAR</button>
+        <button onclick="toggleHistory()" class="text-gray-500 hover:text-white text-sm cursor-pointer" aria-label="Close history">&#x2715;</button>
+      </div>
+    </div>
+    <div id="history-list" class="space-y-2"></div>
+    <div id="history-empty" class="text-center text-gray-600 text-xs font-mono mt-8">No history yet.</div>
+  </div>
+
+  <!-- Boot Screen -->
+  <div id="boot-overlay" class="fixed inset-0 flex flex-col items-center justify-center text-center cursor-pointer" role="presentation">
+    <div class="relative mb-8">
+      <svg id="boot-shield" width="90" height="100" viewBox="0 0 80 90" class="mx-auto mb-4" style="filter: drop-shadow(0 0 30px rgba(var(--color-primary), 0.6));" aria-hidden="true">
+        <path d="M40 5 L75 20 L75 50 Q75 75 40 88 Q5 75 5 50 L5 20 Z"
+          fill="none" stroke="rgb(var(--color-primary))" stroke-width="2" opacity="0.6"
+          stroke-dasharray="250" stroke-dashoffset="250">
+          <animate attributeName="stroke-dashoffset" from="250" to="0" dur="2s" fill="freeze" />
+        </path>
+        <path d="M30 45 L38 55 L55 35" fill="none" stroke="rgb(var(--color-primary))" stroke-width="3"
+          stroke-linecap="round" stroke-linejoin="round"
+          stroke-dasharray="40" stroke-dashoffset="40" opacity="0">
+          <animate attributeName="stroke-dashoffset" from="40" to="0" dur="0.5s" begin="1.5s" fill="freeze" />
+          <animate attributeName="opacity" from="0" to="1" dur="0.1s" begin="1.5s" fill="freeze" />
+        </path>
+      </svg>
+    </div>
+    <h1 class="text-5xl md:text-7xl font-heading font-bold tracking-[0.2em] mb-2 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 animate-pulse">SCAMGUARD</h1>
+    <p class="text-xs font-mono text-gray-600 tracking-[0.5em] mb-8">NEURAL DEFENSE GRID v5.0</p>
+    <div id="boot-log" class="h-24 font-mono text-sm text-gray-500 w-80 mb-8 overflow-hidden" aria-live="polite"></div>
+    <div class="flex gap-4 items-center">
+      <div class="text-xs tracking-[0.3em] text-gray-600 animate-bounce font-mono">CLICK TO INITIALIZE</div>
+      <button id="btn-skip-boot" class="text-[10px] px-3 py-1 rounded border border-gray-700 text-gray-500 hover:text-white hover:border-gray-500 transition-colors cursor-pointer font-mono" aria-label="Skip boot animation">SKIP</button>
+    </div>
+    <div class="mt-4 text-[10px] text-gray-700 font-mono">v5.0.0 &bull; Manipal University Jaipur</div>
+  </div>
+
+  <!-- ═══════════════════ MAIN DASHBOARD ═══════════════════ -->
   <div id="dashboard" class="min-h-screen p-4 md:p-8 flex flex-col opacity-0 pointer-events-none transition-opacity duration-1000 relative z-10">
-    
+
     <!-- Top Bar -->
-    <header class="flex justify-between items-center mb-6 glass-panel rounded-xl p-4">
+    <header class="flex justify-between items-center mb-6 glass-panel rounded-xl p-4" role="banner">
       <div class="flex items-center gap-4">
-        <div class="w-10 h-10 rounded-full border-2 border-[rgb(var(--color-primary))] flex items-center justify-center shadow-[0_0_15px_rgba(var(--color-primary),0.5)]">
+        <div class="w-10 h-10 rounded-full border-2 border-[rgb(var(--color-primary))] flex items-center justify-center shadow-[0_0_15px_rgba(var(--color-primary),0.5)]" aria-hidden="true">
           <svg class="w-6 h-6 text-[rgb(var(--color-primary))]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
         </div>
         <div>
-          <h1 class="text-2xl font-heading font-bold tracking-wider text-primary-glow">SCAMGUARD <span class="text-xs font-mono opacity-60 ml-2">v3.0</span></h1>
-          <p class="text-[10px] font-mono text-gray-400 tracking-widest">NEURAL VISHING DEFENSE SYSTEM</p>
+          <h1 class="text-2xl font-heading font-bold tracking-wider text-primary-glow">SCAMGUARD <span class="text-xs font-mono opacity-60 ml-2">v5.0</span></h1>
+          <p class="text-[10px] font-mono text-gray-400 tracking-widest">NEURAL DEFENSE GRID &bull; REAL-TIME VISHING DETECTION</p>
         </div>
       </div>
-
       <div class="flex items-center gap-4">
+        <button id="btn-history" class="btn-interactive px-3 h-8 rounded flex items-center gap-1 text-[10px] font-bold tracking-wider" aria-label="Open analysis history">&#x1F4CB; HISTORY</button>
         <div class="text-right hidden md:block">
-          <div class="text-[10px] text-gray-500 font-mono uppercase">Session ID</div>
+          <div class="text-[10px] text-gray-500 font-mono uppercase">Local Time</div>
+          <div id="live-clock" class="text-sm font-mono text-primary tabular-nums" aria-label="Current time">--:--:--</div>
+        </div>
+        <div class="text-right hidden md:block">
+          <div class="text-[10px] text-gray-500 font-mono uppercase">Session</div>
           <div id="session-id-display" class="text-sm font-mono text-white">INITIALIZING...</div>
         </div>
         <div class="text-right">
           <div class="text-[10px] text-gray-500 font-mono uppercase">Model</div>
           <div id="model-name-display" class="text-sm font-mono text-primary">LOADING</div>
         </div>
-        <div class="px-3 py-1 rounded-full bg-green-900/30 border border-green-500/30 flex items-center gap-2">
+        <div class="px-3 py-1 rounded-full bg-green-900/30 border border-green-500/30 flex items-center gap-2" role="status" aria-label="Connection status">
           <span id="ws-dot" class="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_8px_#4ade80]"></span>
           <span id="ws-text" class="text-[10px] font-bold text-green-400 uppercase tracking-wider">ONLINE</span>
         </div>
       </div>
     </header>
 
-    <!-- Grid Content -->
-    <main class="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1">
-      
-      <!-- LEFT COLUMN: METRICS & GAUGES -->
-      <section class="lg:col-span-4 flex flex-col gap-6">
-        
-        <!-- Threat Meter Card -->
+    <!-- Grid -->
+    <main class="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1" role="main">
+
+      <!-- LEFT COLUMN -->
+      <section class="lg:col-span-4 flex flex-col gap-6" aria-label="Threat analysis panels">
+
+        <!-- Threat Meter -->
         <div class="glass-panel rounded-xl p-6 flex flex-col items-center relative group">
+          <div class="scan-line" id="scan-line" aria-hidden="true"></div>
           <h2 class="text-sm font-heading font-bold text-gray-400 uppercase tracking-widest w-full mb-4 flex justify-between items-center">
             Threat Level
-            <span id="status-badge" class="px-2 py-0.5 rounded bg-green-900/50 text-green-400 text-[10px] border border-green-500/30">SAFE</span>
+            <span id="status-badge" class="px-2 py-0.5 rounded bg-green-900/50 text-green-400 text-[10px] border border-green-500/30" role="status">SAFE</span>
           </h2>
-
-          <div class="w-full h-8 bg-gray-900/50 rounded-full overflow-hidden border border-gray-700/50 relative mb-2">
-            <!-- Liquid Effect via multiple shadows/gradients handled by JS -->
-            <div id="meter-bar" class="h-full w-0 bg-gradient-to-r from-green-500 via-yellow-500 to-red-500 shadow-[0_0_20px_rgba(0,255,0,0.5)] transition-all duration-500"></div>
-            <div class="absolute inset-0 bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAIklEQVQIW2O8ePHifwYkEBgYyMgIkgAAiAEB/98AAAAASUVORK5CYII=')] opacity-20"></div>
+          <div class="threat-meter-track" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Threat level meter">
+            <div id="meter-bar" class="threat-meter-fill"></div>
           </div>
-          
-          <div class="flex justify-between w-full text-xs font-mono text-gray-500 px-1">
+          <div class="flex justify-between w-full text-xs font-mono text-gray-500 px-1 mt-2">
             <span>0%</span><span>SAFE</span><span>WARN</span><span>CRIT</span><span>100%</span>
           </div>
-
-          <!-- Cumulative CT Score -->
           <div class="mt-6 text-center">
             <div class="text-xs font-mono text-gray-400 mb-1">CUMULATIVE THREAT SCORE (CT)</div>
-            <div id="ct-score-display" class="text-4xl font-mono font-bold text-primary-glow">0.00</div>
+            <div id="ct-score-display" class="text-4xl font-mono font-bold text-primary-glow counter-animate" aria-label="Cumulative threat score">0.00</div>
+          </div>
+          <div class="mt-4 w-full">
+            <div class="text-[9px] font-mono text-gray-500 mb-1">THREAT HISTORY</div>
+            <div class="sparkline-container"><canvas id="sparkline-canvas" aria-label="Threat history sparkline"></canvas></div>
+          </div>
+          <div class="mt-3 w-full">
+            <div class="text-[9px] font-mono text-gray-500 mb-1">CHUNK HEATMAP</div>
+            <div id="heatmap" class="heatmap-bar" aria-label="Chunk threat heatmap"></div>
           </div>
         </div>
 
-        <!-- AI Confidence & Radar -->
+        <!-- Confidence & Radar -->
         <div class="glass-panel rounded-xl p-6 flex flex-col items-center">
           <h2 class="text-sm font-heading font-bold text-gray-400 uppercase tracking-widest w-full mb-4">AI Confidence Analysis</h2>
-          
-          <div class="relative w-48 h-48 mb-4">
-            <!-- Donut Ring -->
-            <div class="absolute inset-0 rounded-full confidence-ring flex items-center justify-center border-4 border-gray-800/50" style="--ring-pct: 0%;">
-              <div class="donut-text w-32 h-32 rounded-full flex flex-col items-center justify-center border border-gray-700/30">
-                <span id="nlp-conf-val" class="text-2xl font-mono font-bold text-white">0.0%</span>
-                <span class="text-[9px] text-gray-400 font-mono tracking-widest mt-1">NLP CONF</span>
+          <div class="flex items-center gap-6 w-full justify-center flex-wrap">
+            <div class="relative w-40 h-40">
+              <div class="absolute inset-0 rounded-full confidence-ring flex items-center justify-center border-4 border-gray-800/50" style="--ring-pct:0%;" role="meter" aria-label="NLP confidence">
+                <div class="donut-text w-28 h-28 rounded-full flex flex-col items-center justify-center border border-gray-700/30">
+                  <span id="nlp-conf-val" class="text-2xl font-mono font-bold text-white">0.0%</span>
+                  <span class="text-[9px] text-gray-400 font-mono tracking-widest mt-1">NLP CONF</span>
+                </div>
+              </div>
+              <div class="absolute inset-0 border border-dashed border-gray-700 rounded-full animate-[spin_10s_linear_infinite]" aria-hidden="true"></div>
+            </div>
+            <div class="radar-container" aria-hidden="true">
+              <div class="radar-rings"></div>
+              <div class="radar-sweep"></div>
+              <div id="radar-dot-1" class="radar-dot" style="top:30%;left:40%;"></div>
+              <div id="radar-dot-2" class="radar-dot" style="top:60%;left:70%;"></div>
+              <div id="radar-dot-3" class="radar-dot" style="top:45%;left:25%;"></div>
+              <div class="absolute inset-0 flex items-center justify-center">
+                <div class="w-2 h-2 rounded-full bg-[rgb(var(--color-primary))]" style="box-shadow:0 0 6px rgb(var(--color-primary));"></div>
               </div>
             </div>
-            <!-- Rotating decorative ring -->
-            <div class="absolute inset-0 border border-dashed border-gray-700 rounded-full animate-[spin_10s_linear_infinite]"></div>
           </div>
-
-          <div class="grid grid-cols-2 gap-3 w-full">
+          <div class="grid grid-cols-3 gap-3 w-full mt-4">
             <div class="bg-gray-900/30 p-3 rounded border border-gray-700/30 text-center">
               <div class="text-[9px] text-gray-500 font-mono mb-1">LATENCY</div>
-              <div class="text-xl font-mono font-bold text-white"><span id="lat-val">--</span><span class="text-xs text-gray-500 ml-1">ms</span></div>
+              <div class="text-lg font-mono font-bold text-white"><span id="lat-val">--</span><span class="text-xs text-gray-500 ml-1">ms</span></div>
             </div>
             <div class="bg-gray-900/30 p-3 rounded border border-gray-700/30 text-center">
               <div class="text-[9px] text-gray-500 font-mono mb-1">KW WEIGHT</div>
-              <div id="kw-val" class="text-xl font-mono font-bold text-amber-400">0</div>
+              <div id="kw-val" class="text-lg font-mono font-bold text-amber-400">0</div>
+            </div>
+            <div class="bg-gray-900/30 p-3 rounded border border-gray-700/30 text-center">
+              <div class="text-[9px] text-gray-500 font-mono mb-1">MODEL ACC</div>
+              <div id="accuracy-val" class="text-lg font-mono font-bold text-emerald-400">--</div>
             </div>
           </div>
+        </div>
+
+        <!-- Neural Viz -->
+        <div class="glass-panel rounded-xl p-5">
+          <h3 class="text-xs font-heading font-bold text-gray-400 mb-3 uppercase tracking-widest flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            Neural Activity
+          </h3>
+          <svg id="neural-svg" viewBox="0 0 300 100" class="w-full" style="height:80px;" aria-hidden="true"></svg>
         </div>
 
         <!-- Threshold Sliders -->
@@ -318,84 +734,87 @@
               <div class="flex justify-between text-[10px] font-mono text-gray-400 mb-1">
                 <span>ALERT LEVEL</span><span id="val-alert" class="text-amber-400">55%</span>
               </div>
-              <input type="range" id="slider-alert" min="10" max="90" value="55" class="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+              <input type="range" id="slider-alert" min="10" max="90" value="55" class="w-full" aria-label="Alert threshold">
             </div>
             <div>
               <div class="flex justify-between text-[10px] font-mono text-gray-400 mb-1">
                 <span>DROP LEVEL</span><span id="val-drop" class="text-red-500">80%</span>
               </div>
-              <input type="range" id="slider-drop" min="20" max="100" value="80" class="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+              <input type="range" id="slider-drop" min="20" max="100" value="80" class="w-full" aria-label="Drop threshold">
             </div>
           </div>
         </div>
-
       </section>
 
-      <!-- RIGHT COLUMN: LOGS & INTERACTION -->
-      <section class="lg:col-span-8 flex flex-col gap-6">
-        
+      <!-- RIGHT COLUMN -->
+      <section class="lg:col-span-8 flex flex-col gap-6" aria-label="Analysis feed and input">
+
         <!-- Live Analysis Terminal -->
         <div class="glass-panel rounded-xl flex-1 flex flex-col overflow-hidden relative">
           <div class="p-4 border-b border-gray-700/30 bg-black/20 flex justify-between items-center">
             <h2 class="text-sm font-heading font-bold text-gray-300 tracking-widest flex items-center gap-2">
-              <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span> LIVE ANALYSIS FEED
+              <span class="w-2 h-2 rounded-full bg-[rgb(var(--color-primary))] animate-pulse" aria-hidden="true"></span> LIVE ANALYSIS FEED
             </h2>
-            <div class="flex gap-2">
-              <button onclick="setScenario('safe')" class="text-[10px] px-2 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-400 transition-colors border border-gray-700">Safe</button>
-              <button onclick="setScenario('phishing')" class="text-[10px] px-2 py-1 rounded bg-red-900/30 hover:bg-red-900/50 text-red-400 transition-colors border border-red-900/50">Phishing</button>
-              <button onclick="setScenario('vishing')" class="text-[10px] px-2 py-1 rounded bg-amber-900/30 hover:bg-amber-900/50 text-amber-400 transition-colors border border-amber-900/50">Vishing</button>
+            <div class="flex gap-2" role="group" aria-label="Test scenarios">
+              <button onclick="setScenario('safe')" class="text-[10px] px-2 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-400 transition-colors border border-gray-700 cursor-pointer">Safe</button>
+              <button onclick="setScenario('phishing')" class="text-[10px] px-2 py-1 rounded bg-red-900/30 hover:bg-red-900/50 text-red-400 transition-colors border border-red-900/50 cursor-pointer">Phishing</button>
+              <button onclick="setScenario('vishing')" class="text-[10px] px-2 py-1 rounded bg-amber-900/30 hover:bg-amber-900/50 text-amber-400 transition-colors border border-amber-900/50 cursor-pointer">Vishing</button>
+              <button onclick="setScenario('urgent')" class="text-[10px] px-2 py-1 rounded bg-purple-900/30 hover:bg-purple-900/50 text-purple-400 transition-colors border border-purple-900/50 cursor-pointer">Urgent</button>
             </div>
           </div>
 
-          <div id="log-container" class="flex-1 p-4 overflow-y-auto space-y-3 font-mono text-sm scroll-smooth">
-            <div id="log-placeholder" class="h-full flex flex-col items-center justify-center text-gray-600 opacity-50">
+          <div id="log-container" class="flex-1 p-4 overflow-y-auto space-y-3 font-mono text-sm scroll-smooth" style="min-height:200px;" role="log" aria-label="Analysis results feed" aria-live="polite">
+            <div id="log-placeholder" class="h-full flex flex-col items-center justify-center text-gray-600 opacity-50" style="min-height:180px;">
               <svg class="w-16 h-16 mb-2 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
               <p>AWAITING NEURAL INPUT STREAM...</p>
+              <canvas id="audio-visualizer" width="200" height="50" class="mt-4 opacity-50" aria-hidden="true"></canvas>
+              <p class="text-[9px] mt-2 text-gray-700">Press Ctrl+K for command palette &bull; ? for shortcuts &bull; Say "Hey ScamGuard"</p>
             </div>
           </div>
 
-          <!-- Quick Stats Footer -->
-          <div class="grid grid-cols-4 divide-x divide-gray-700/30 bg-black/30 border-t border-gray-700/30 text-center py-2">
-            <div><div class="text-[9px] text-gray-500 uppercase">Chunks</div><div id="stat-chunks" class="text-lg font-bold text-white">0</div></div>
-            <div><div class="text-[9px] text-gray-500 uppercase">Threats</div><div id="stat-threats" class="text-lg font-bold text-red-400">0</div></div>
+          <!-- Stats Footer -->
+          <div class="grid grid-cols-5 divide-x divide-gray-700/30 bg-black/30 border-t border-gray-700/30 text-center py-2" role="group" aria-label="Session statistics">
+            <div><div class="text-[9px] text-gray-500 uppercase">Chunks</div><div id="stat-chunks" class="text-lg font-bold text-white counter-animate">0</div></div>
+            <div><div class="text-[9px] text-gray-500 uppercase">Threats</div><div id="stat-threats" class="text-lg font-bold text-red-400 counter-animate">0</div></div>
             <div><div class="text-[9px] text-gray-500 uppercase">Avg Lat</div><div id="stat-lat" class="text-lg font-bold text-white">0ms</div></div>
             <div><div class="text-[9px] text-gray-500 uppercase">State</div><div id="stat-state" class="text-lg font-bold text-green-400">MON</div></div>
+            <div><div class="text-[9px] text-gray-500 uppercase">Uptime</div><div id="stat-uptime" class="text-lg font-bold text-cyan-400 tabular-nums">0:00</div></div>
           </div>
         </div>
 
         <!-- Input Console -->
         <div class="glass-panel rounded-xl p-5 relative">
-          <!-- Mic Visualizer Overlay -->
-          <div id="vis-container" class="absolute inset-0 bg-[rgb(var(--color-bg))] flex items-center justify-center z-10 hidden transition-opacity">
-             <div class="flex items-end gap-1 h-16">
-               <div class="w-2 bg-primary rounded-t-sm h-2 animate-[vis_0.5s_ease-in-out_infinite]"></div>
-               <div class="w-2 bg-primary rounded-t-sm h-6 animate-[vis_0.7s_ease-in-out_infinite]"></div>
-               <div class="w-2 bg-primary rounded-t-sm h-10 animate-[vis_0.6s_ease-in-out_infinite]"></div>
-               <div class="w-2 bg-primary rounded-t-sm h-4 animate-[vis_0.8s_ease-in-out_infinite]"></div>
-               <div class="w-2 bg-primary rounded-t-sm h-8 animate-[vis_0.5s_ease-in-out_infinite]"></div>
-             </div>
-             <div class="absolute bottom-4 text-xs font-mono text-gray-500 animate-pulse">LISTENING...</div>
+          <div id="vis-container" class="absolute inset-0 rounded-xl bg-[rgb(5,8,15)] flex items-center justify-center z-10 hidden transition-opacity" role="status" aria-label="Listening for speech">
+            <div class="flex items-end gap-1 h-16">
+              <div class="w-2 rounded-t-sm bg-[rgb(var(--color-primary))]" style="animation:vis 0.5s ease-in-out infinite;"></div>
+              <div class="w-2 rounded-t-sm bg-[rgb(var(--color-primary))]" style="animation:vis 0.7s ease-in-out infinite;"></div>
+              <div class="w-2 rounded-t-sm bg-[rgb(var(--color-primary))]" style="animation:vis 0.6s ease-in-out infinite;"></div>
+              <div class="w-2 rounded-t-sm bg-[rgb(var(--color-primary))]" style="animation:vis 0.8s ease-in-out infinite;"></div>
+              <div class="w-2 rounded-t-sm bg-[rgb(var(--color-primary))]" style="animation:vis 0.5s ease-in-out infinite;"></div>
+            </div>
+            <div class="absolute bottom-4 text-xs font-mono text-gray-500 animate-pulse">LISTENING...</div>
           </div>
 
           <div class="flex flex-col gap-3">
             <div class="relative group">
-              <textarea id="input-text" rows="2" class="w-full bg-gray-900/60 border border-gray-700 rounded-lg p-3 text-sm font-mono text-gray-200 focus:outline-none focus:border-[rgb(var(--color-primary))] focus:ring-1 focus:ring-[rgb(var(--color-primary))] resize-none transition-all" placeholder="Paste transcript or type conversation chunk..."></textarea>
+              <textarea id="input-text" rows="2" class="w-full bg-gray-900/60 border border-gray-700 rounded-lg p-3 text-sm font-mono text-gray-200 focus:outline-none focus:border-[rgb(var(--color-primary))] focus:ring-1 focus:ring-[rgb(var(--color-primary))] resize-none transition-all" placeholder="Paste transcript or type conversation chunk..." aria-label="Text to analyze"></textarea>
               <div class="absolute bottom-3 right-3 flex gap-2">
-                <span class="text-[9px] bg-gray-800 px-1 rounded text-gray-500 border border-gray-700">ENTER ↵</span>
+                <span class="text-[9px] bg-gray-800 px-1 rounded text-gray-500 border border-gray-700">CTRL+ENTER</span>
               </div>
             </div>
-            <div class="flex justify-between items-center">
+            <div class="flex justify-between items-center flex-wrap gap-2">
               <div class="flex gap-2">
-                <button id="btn-mic" class="btn-interactive w-10 h-10 rounded-full flex items-center justify-center">🎤</button>
-                <button id="btn-reset" class="btn-interactive px-4 h-10 rounded flex items-center gap-2 text-xs font-bold tracking-wider">↻ RESET</button>
-                <button id="btn-clear" class="btn-interactive px-4 h-10 rounded flex items-center gap-2 text-xs font-bold tracking-wider">⌧ CLEAR</button>
+                <button id="btn-mic" class="btn-interactive w-10 h-10 rounded-full flex items-center justify-center" title="Microphone" aria-label="Toggle microphone">&#x1F399;</button>
+                <button id="btn-voice" class="btn-interactive w-10 h-10 rounded-full flex items-center justify-center" title="Jarvis Voice Mode (Ctrl+V)" aria-label="Toggle voice mode">&#x1F50A;</button>
+                <button id="btn-reset" class="btn-interactive px-4 h-10 rounded flex items-center gap-2 text-xs font-bold tracking-wider" aria-label="Reset session">&#x21BB; RESET</button>
+                <button id="btn-clear" class="btn-interactive px-4 h-10 rounded flex items-center gap-2 text-xs font-bold tracking-wider" aria-label="Clear analysis log">&#x2327; CLEAR</button>
               </div>
               <div class="flex gap-2">
-                <button id="btn-analyze" class="btn-interactive px-8 h-10 rounded bg-[rgb(var(--color-primary))] text-black hover:bg-opacity-90 font-bold tracking-wider flex items-center gap-2">
+                <button id="btn-analyze" class="btn-interactive px-8 h-10 rounded bg-[rgb(var(--color-primary))] text-black hover:bg-opacity-90 font-bold tracking-wider flex items-center gap-2" aria-label="Analyze text">
                   <span>ANALYZE</span>
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                 </button>
-                <button id="btn-export" class="btn-interactive px-4 h-10 rounded flex items-center gap-2 text-xs font-bold tracking-wider" title="Export Report">↓</button>
+                <button id="btn-export" class="btn-interactive px-4 h-10 rounded flex items-center gap-2 text-xs font-bold tracking-wider" aria-label="Export PDF report">&#x1F4C4; EXPORT</button>
               </div>
             </div>
           </div>
@@ -403,78 +822,85 @@
       </section>
     </main>
 
-    <!-- Footer -->
-    <footer class="mt-6 text-center text-[10px] text-gray-600 font-mono tracking-[0.2em]">
-      SCAMGUARD ENGINE · SECURE WEBSOCKET · MANIPAL UNIVERSITY JAIPUR
+    <footer class="mt-6 text-center text-[10px] text-gray-600 font-mono tracking-[0.2em]" role="contentinfo">
+      SCAMGUARD v5.0 ENGINE &bull; SECURE WEBSOCKET &bull; MANIPAL UNIVERSITY JAIPUR
     </footer>
-
   </div>
 
   <!-- Settings Cog -->
-  <button id="btn-settings" class="fixed bottom-6 right-6 z-40 w-12 h-12 rounded-full glass-panel flex items-center justify-center text-primary hover:text-white hover:bg-white/10 transition-all animate-[spin_10s_linear_infinite] hover:animate-none">
+  <button id="btn-settings" class="fixed bottom-6 right-6 z-40 w-12 h-12 rounded-full glass-panel flex items-center justify-center hover:text-white hover:bg-white/10 transition-all animate-[spin_10s_linear_infinite] hover:animate-none cursor-pointer" style="color:rgb(var(--color-primary));" aria-label="Open settings">
     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-2.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
   </button>
 
+  <!-- Shortcuts hint -->
+  <div class="fixed bottom-6 left-6 z-40 text-[10px] font-mono text-gray-700 hidden md:block">
+    Press <span class="key-badge">?</span> for shortcuts &bull; <span class="key-badge">Ctrl+K</span> command palette &bull; <span class="key-badge">Ctrl+H</span> history
+  </div>
+
   <!-- Settings Panel -->
-  <div id="settings-panel" class="fixed top-0 right-0 h-full w-80 bg-[#0a0f18] border-l border-gray-800 z-50 shadow-2xl p-6 overflow-y-auto">
+  <div id="settings-panel" class="fixed top-0 right-0 h-full w-80 bg-[#0a0f18] border-l border-gray-800 z-50 shadow-2xl p-6 overflow-y-auto" role="dialog" aria-label="Settings panel">
     <div class="flex justify-between items-center mb-8">
       <h2 class="text-xl font-heading font-bold text-white">CALIBRATION</h2>
-      <button id="btn-close-settings" class="text-gray-500 hover:text-white">✕</button>
+      <button id="btn-close-settings" class="text-gray-500 hover:text-white cursor-pointer" aria-label="Close settings">&#x2715;</button>
     </div>
-
     <div class="space-y-8">
-      <!-- Theme Selector -->
       <div>
         <label class="block text-xs font-mono text-gray-400 mb-3 uppercase tracking-wider">Color Scheme</label>
         <div class="grid grid-cols-2 gap-3">
-          <button onclick="setTheme('cyan')" class="h-10 rounded border border-cyan-500/30 bg-cyan-900/20 hover:bg-cyan-500/30 transition-all text-cyan-400 text-xs font-bold">CYAN OPS</button>
-          <button onclick="setTheme('emerald')" class="h-10 rounded border border-green-500/30 bg-green-900/20 hover:bg-green-500/30 transition-all text-green-400 text-xs font-bold">EMERALD</button>
-          <button onclick="setTheme('sentinel')" class="h-10 rounded border border-red-500/30 bg-red-900/20 hover:bg-red-500/30 transition-all text-red-400 text-xs font-bold">SENTINEL RED</button>
-          <button onclick="setTheme('amber')" class="h-10 rounded border border-amber-500/30 bg-amber-900/20 hover:bg-amber-500/30 transition-all text-amber-400 text-xs font-bold">MIDNIGHT AMBER</button>
+          <button onclick="setTheme('cyan')" class="h-10 rounded border border-cyan-500/30 bg-cyan-900/20 hover:bg-cyan-500/30 transition-all text-cyan-400 text-xs font-bold cursor-pointer">CYAN OPS</button>
+          <button onclick="setTheme('emerald')" class="h-10 rounded border border-green-500/30 bg-green-900/20 hover:bg-green-500/30 transition-all text-green-400 text-xs font-bold cursor-pointer">EMERALD</button>
+          <button onclick="setTheme('sentinel')" class="h-10 rounded border border-red-500/30 bg-red-900/20 hover:bg-red-500/30 transition-all text-red-400 text-xs font-bold cursor-pointer">SENTINEL</button>
+          <button onclick="setTheme('amber')" class="h-10 rounded border border-amber-500/30 bg-amber-900/20 hover:bg-amber-500/30 transition-all text-amber-400 text-xs font-bold cursor-pointer">AMBER</button>
+          <button onclick="setTheme('phantom')" class="h-10 rounded border border-purple-500/30 bg-purple-900/20 hover:bg-purple-500/30 transition-all text-purple-400 text-xs font-bold cursor-pointer col-span-2">PHANTOM</button>
         </div>
       </div>
-
-      <!-- Sliders -->
       <div>
         <label class="block text-xs font-mono text-gray-400 mb-2 uppercase tracking-wider">Glow Intensity</label>
-        <input type="range" min="0" max="2" step="0.1" value="1" class="w-full" oninput="document.documentElement.style.setProperty('--glow-intensity', this.value)">
+        <input type="range" min="0" max="2" step="0.1" value="1" class="w-full" oninput="document.documentElement.style.setProperty('--glow-intensity', this.value)" aria-label="Glow intensity">
       </div>
-      <div>
-        <label class="block text-xs font-mono text-gray-400 mb-2 uppercase tracking-wider">Anim Speed</label>
-        <input type="range" min="0.5" max="3" step="0.1" value="1" class="w-full" oninput="document.documentElement.style.setProperty('--anim-speed', 1/this.value)">
-      </div>
-
-      <!-- Audio -->
       <div>
         <label class="block text-xs font-mono text-gray-400 mb-2 uppercase tracking-wider">Audio Feedback</label>
         <div class="flex gap-2">
-          <button onclick="toggleAudio(true)" class="flex-1 py-2 rounded bg-gray-800 text-xs text-gray-300 hover:text-white border border-gray-700">ON</button>
-          <button onclick="toggleAudio(false)" class="flex-1 py-2 rounded bg-gray-800 text-xs text-gray-300 hover:text-white border border-gray-700">OFF</button>
+          <button onclick="toggleAudio(true)" class="flex-1 py-2 rounded bg-gray-800 text-xs text-gray-300 hover:text-white border border-gray-700 cursor-pointer">ON</button>
+          <button onclick="toggleAudio(false)" class="flex-1 py-2 rounded bg-gray-800 text-xs text-gray-300 hover:text-white border border-gray-700 cursor-pointer">OFF</button>
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-mono text-gray-400 mb-2 uppercase tracking-wider">Session Info</label>
+        <div class="bg-gray-900/50 rounded p-3 text-xs font-mono text-gray-400 space-y-1">
+          <div>Chunks: <span class="text-white" id="settings-chunks">0</span></div>
+          <div>Threats: <span class="text-red-400" id="settings-threats">0</span></div>
+          <div>Session: <span class="text-cyan-400" id="settings-session">--</span></div>
+          <div>Version: <span class="text-white">5.0.0</span></div>
         </div>
       </div>
     </div>
   </div>
 
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- JAVASCRIPT — ALL LOGIC BELOW -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
   <script>
-    /* =========================================
-       CORE CONFIG & STATE
-    ========================================= */
-    const WS_URL = 'ws://localhost:8000/ws/';
+    /* ═══════════════════ CORE STATE ═══════════════════ */
+    const APP_VERSION = '5.0.0';
+    const WS_URL = (location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + location.host + '/ws/';
     let sessionId = 'SG-' + Math.random().toString(36).substr(2, 8).toUpperCase();
     let ws = null;
     let isInitialized = false;
     let isAudioEnabled = true;
     let audioCtx, analyser, micStream;
-    let recognition;
-    
-    // State variables
-    let chunkCount = 0;
-    let scamCount = 0;
-    let totalLatency = 0;
-    let thresholds = { alert: 0.55, drop: 0.80 };
-    let currentThreatLevel = 0; // 0 to 100
+    let recognition, jarvisRecognition, jarvisActive = false;
 
-    // DOM Elements
+    let chunkCount = 0, scamCount = 0, totalLatency = 0;
+    let thresholds = { alert: 0.55, drop: 0.80 };
+    let currentThreatLevel = 0;
+    let threatHistory = [];
+    let sessionStartTime = Date.now();
+    let heatmapData = [];
+    let analysisResults = [];
+    let devModeActive = false;
+    let modelAccuracy = null; // Real accuracy from backend
+
     const els = {
       dashboard: document.getElementById('dashboard'),
       overlay: document.getElementById('boot-overlay'),
@@ -500,437 +926,807 @@
       statThreats: document.getElementById('stat-threats'),
       statLat: document.getElementById('stat-lat'),
       statState: document.getElementById('stat-state'),
+      statUptime: document.getElementById('stat-uptime'),
       sliderAlert: document.getElementById('slider-alert'),
       sliderDrop: document.getElementById('slider-drop'),
       valAlert: document.getElementById('val-alert'),
       valDrop: document.getElementById('val-drop'),
-      visContainer: document.getElementById('vis-container')
+      visContainer: document.getElementById('vis-container'),
+      dropOverlay: document.getElementById('drop-overlay'),
+      dropReason: document.getElementById('drop-reason'),
+      liveClock: document.getElementById('live-clock'),
+      scanLine: document.getElementById('scan-line'),
+      sparklineCanvas: document.getElementById('sparkline-canvas'),
+      heatmap: document.getElementById('heatmap'),
+      accuracyVal: document.getElementById('accuracy-val'),
     };
 
-    /* =========================================
-       BOOT SEQUENCE
-    ========================================= */
-    const bootLines = [
-      "INITIALIZING NEURAL CORE...",
-      "LOADING SCAMGUARD v3.0 KERNEL...",
-      "CONNECTING TO BACKEND...",
-      "CALIBRATING SENSORS...",
-      "SYSTEM READY."
-    ];
-    let bootStep = 0;
+    /* ═══════════════════ FETCH REAL MODEL ACCURACY ═══════════════════ */
+    async function fetchModelAccuracy() {
+      try {
+        const res = await fetch('/api/v1/health');
+        const data = await res.json();
+        if (data.model) els.modelDisplay.textContent = data.model.split('(')[0].trim();
+        if (data.inference_ok) {
+          // Show real latency from health check as baseline
+          modelAccuracy = data.inference_ms ? `${Math.round(data.inference_ms)}ms` : null;
+        }
+      } catch(e) { /* Backend not available yet */ }
+    }
 
+    /* ═══════════════════ LIVE CLOCK ═══════════════════ */
+    function updateClock() {
+      const now = new Date();
+      els.liveClock.textContent = now.toLocaleTimeString('en-US', { hour12: false });
+      const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
+      els.statUptime.textContent = `${Math.floor(elapsed/60)}:${(elapsed%60).toString().padStart(2,'0')}`;
+    }
+    setInterval(updateClock, 1000);
+
+    /* ═══════════════════ TOAST SYSTEM ═══════════════════ */
+    function showToast(message, type = 'info', duration = 4000) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.setAttribute('role', 'alert');
+      const icons = { success: '\u2713', warn: '\u26A0', danger: '\uD83D\uDEA8', info: '\u2139' };
+      toast.innerHTML = `<span class="mr-2">${icons[type] || icons.info}</span> ${escapeHtml(message)}`;
+      container.appendChild(toast);
+      requestAnimationFrame(() => requestAnimationFrame(() => toast.classList.add('show')));
+      setTimeout(() => { toast.classList.add('hide'); toast.classList.remove('show'); setTimeout(() => toast.remove(), 400); }, duration);
+    }
+
+    /* ═══════════════════ CHROMATIC ABERRATION ═══════════════════ */
+    function updateChromaticAberration(threatPct) {
+      const offset = Math.min(threatPct * 0.04, 3);
+      document.documentElement.style.setProperty('--chromatic-offset', offset + 'px');
+      const scanlineOp = 0.04 + (threatPct * 0.002);
+      document.documentElement.style.setProperty('--scanline-opacity', Math.min(scanlineOp, 0.25));
+    }
+
+    /* ═══════════════════ SPARKLINE ═══════════════════ */
+    function initSparkline() {
+      const c = els.sparklineCanvas;
+      c.width = c.parentElement.clientWidth * 2;
+      c.height = 120; c.style.width = '100%'; c.style.height = '60px';
+    }
+    function drawSparkline() {
+      const c = els.sparklineCanvas, ctx = c.getContext('2d'), w = c.width, h = c.height;
+      ctx.clearRect(0, 0, w, h);
+      if (threatHistory.length < 2) return;
+      const step = w / Math.max(threatHistory.length - 1, 1);
+      const lastVal = threatHistory[threatHistory.length - 1];
+      const grad = ctx.createLinearGradient(0, 0, 0, h);
+      if (lastVal > 70) { grad.addColorStop(0, 'rgba(255,50,80,0.4)'); grad.addColorStop(1, 'rgba(255,50,80,0)'); }
+      else if (lastVal > 40) { grad.addColorStop(0, 'rgba(255,170,0,0.4)'); grad.addColorStop(1, 'rgba(255,170,0,0)'); }
+      else { grad.addColorStop(0, 'rgba(0,255,200,0.3)'); grad.addColorStop(1, 'rgba(0,255,200,0)'); }
+      ctx.beginPath(); ctx.moveTo(0, h);
+      threatHistory.forEach((v, i) => ctx.lineTo(i * step, h - (v / 100) * h));
+      ctx.lineTo((threatHistory.length - 1) * step, h); ctx.closePath();
+      ctx.fillStyle = grad; ctx.fill();
+      ctx.beginPath();
+      threatHistory.forEach((v, i) => { const x = i * step, y = h - (v / 100) * h; if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); });
+      ctx.strokeStyle = lastVal > 70 ? '#ff3250' : lastVal > 40 ? '#ffaa00' : '#00ffc8';
+      ctx.lineWidth = 2; ctx.stroke();
+      const lx = (threatHistory.length - 1) * step, ly = h - (lastVal / 100) * h;
+      ctx.beginPath(); ctx.arc(lx, ly, 4, 0, Math.PI * 2); ctx.fillStyle = ctx.strokeStyle; ctx.fill();
+      ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(255,170,0,0.4)';
+      const alertY = h - (thresholds.alert * 100 / 100) * h;
+      ctx.beginPath(); ctx.moveTo(0, alertY); ctx.lineTo(w, alertY); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,50,80,0.4)';
+      const dropY = h - (thresholds.drop * 100 / 100) * h;
+      ctx.beginPath(); ctx.moveTo(0, dropY); ctx.lineTo(w, dropY); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    /* ═══════════════════ HEATMAP ═══════════════════ */
+    function addHeatmapCell(pct) { heatmapData.push(pct); renderHeatmap(); }
+    function renderHeatmap() {
+      els.heatmap.innerHTML = '';
+      const data = heatmapData.slice(-40);
+      data.forEach(v => {
+        const cell = document.createElement('div');
+        cell.className = 'heatmap-cell';
+        const r = Math.min(255, Math.floor(v * 2.55)), g = Math.max(0, Math.floor(255 - v * 2.55));
+        cell.style.background = `rgba(${r},${g},60,${0.3 + v * 0.007})`;
+        if (v > 60) cell.style.boxShadow = `0 0 6px rgba(${r},${g},60,0.5)`;
+        cell.title = `${v.toFixed(1)}%`;
+        els.heatmap.appendChild(cell);
+      });
+    }
+
+    /* ═══════════════════ NEURAL VIZ ═══════════════════ */
+    function initNeuralViz() {
+      const svg = document.getElementById('neural-svg');
+      const layers = [3, 5, 6, 4, 2], nodes = [], links = [];
+      const xStep = 300 / (layers.length + 1);
+      layers.forEach((count, li) => {
+        const x = xStep * (li + 1), yStep = 100 / (count + 1), layerNodes = [];
+        for (let i = 0; i < count; i++) layerNodes.push({ x, y: yStep * (i + 1) });
+        nodes.push(layerNodes);
+      });
+      for (let l = 0; l < nodes.length - 1; l++) {
+        nodes[l].forEach(n1 => {
+          nodes[l + 1].forEach(n2 => {
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', n1.x); line.setAttribute('y1', n1.y);
+            line.setAttribute('x2', n2.x); line.setAttribute('y2', n2.y);
+            line.setAttribute('class', 'neural-link'); line.dataset.layer = l;
+            svg.appendChild(line); links.push(line);
+          });
+        });
+      }
+      nodes.flat().forEach(n => {
+        const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        c.setAttribute('cx', n.x); c.setAttribute('cy', n.y);
+        c.setAttribute('r', 3); c.setAttribute('class', 'neural-node');
+        svg.appendChild(c);
+      });
+      setInterval(() => {
+        links.forEach(l => l.classList.remove('active'));
+        const cnt = Math.floor(3 + currentThreatLevel / 10);
+        for (let i = 0; i < cnt; i++) links[Math.floor(Math.random() * links.length)].classList.add('active');
+      }, 800);
+    }
+
+    /* ═══════════════════ RADAR ═══════════════════ */
+    function updateRadarDots(pct) {
+      const dots = [document.getElementById('radar-dot-1'), document.getElementById('radar-dot-2'), document.getElementById('radar-dot-3')];
+      dots.forEach((d, i) => {
+        if (pct > (i + 1) * 25) { d.classList.add('active'); d.style.top = (20 + Math.random() * 60) + '%'; d.style.left = (20 + Math.random() * 60) + '%'; }
+        else d.classList.remove('active');
+      });
+    }
+
+    /* ═══════════════════ HISTORY (localStorage) ═══════════════════ */
+    function saveToHistory(text, result) {
+      try {
+        const history = JSON.parse(localStorage.getItem('scamguard_history') || '[]');
+        history.unshift({
+          text: text.substring(0, 200),
+          is_scam: result.is_scam,
+          ct_percent: result.ct_percent,
+          status: result.status,
+          timestamp: new Date().toISOString(),
+          session: sessionId,
+        });
+        // Keep last 100 entries
+        if (history.length > 100) history.length = 100;
+        localStorage.setItem('scamguard_history', JSON.stringify(history));
+      } catch(e) { /* localStorage might be full or disabled */ }
+    }
+
+    function toggleHistory() {
+      const panel = document.getElementById('history-panel');
+      panel.classList.toggle('open');
+      if (panel.classList.contains('open')) renderHistory();
+    }
+
+    function renderHistory() {
+      const list = document.getElementById('history-list');
+      const empty = document.getElementById('history-empty');
+      try {
+        const history = JSON.parse(localStorage.getItem('scamguard_history') || '[]');
+        if (history.length === 0) { empty.style.display = 'block'; list.innerHTML = ''; return; }
+        empty.style.display = 'none';
+        list.innerHTML = history.slice(0, 50).map(h => `
+          <div class="history-item" onclick="loadFromHistory('${escapeHtml(h.text.replace(/'/g, "\\'"))}')">
+            <div class="flex justify-between items-center mb-1">
+              <span class="text-[10px] font-mono ${h.is_scam ? 'text-red-400' : 'text-green-400'}">${h.is_scam ? '⚠ SCAM' : '✓ SAFE'}</span>
+              <span class="text-[9px] text-gray-600">${new Date(h.timestamp).toLocaleString()}</span>
+            </div>
+            <div class="text-xs text-gray-400 truncate">${escapeHtml(h.text)}</div>
+            <div class="text-[9px] text-gray-600 mt-1">CT: ${(h.ct_percent || 0).toFixed(1)}% | ${h.status}</div>
+          </div>
+        `).join('');
+      } catch(e) { empty.style.display = 'block'; }
+    }
+
+    function loadFromHistory(text) {
+      els.input.value = text;
+      toggleHistory();
+      showToast('Loaded from history', 'info', 2000);
+    }
+
+    function clearHistory() {
+      localStorage.removeItem('scamguard_history');
+      renderHistory();
+      showToast('History cleared', 'success', 2000);
+    }
+
+    /* ═══════════════════ COMMAND PALETTE ═══════════════════ */
+    const commands = [
+      { icon: '\u26A1', label: 'Analyze Current Input', shortcut: 'Ctrl+Enter', action: () => { triggerShockwave(); sendChunk(els.input.value); els.input.value = ''; } },
+      { icon: '\uD83D\uDD04', label: 'Reset Session', shortcut: 'Ctrl+R', action: () => { if(ws && ws.readyState === 1) ws.send(JSON.stringify({type:'reset'})); else resetUI(); } },
+      { icon: '\uD83E\uDDF9', label: 'Clear Logs', action: () => { els.logContainer.querySelectorAll('[data-chunk]').forEach(e => e.remove()); els.logPlaceholder.style.display = 'flex'; } },
+      { icon: '\uD83C\uDFA4', label: 'Toggle Microphone', shortcut: 'Ctrl+M', action: () => els.visContainer.classList.contains('hidden') ? startListening() : stopListening() },
+      { icon: '\uD83D\uDCC4', label: 'Export Report', shortcut: 'Ctrl+E', action: () => exportReport() },
+      { icon: '\u2699\uFE0F', label: 'Open Settings', shortcut: 'Ctrl+S', action: () => els.settingsPanel.classList.add('open') },
+      { icon: '\uD83D\uDD0A', label: 'Jarvis Voice Mode', shortcut: 'Ctrl+V', action: () => toggleJarvisMode() },
+      { icon: '\uD83D\uDCCB', label: 'Analysis History', shortcut: 'Ctrl+H', action: () => toggleHistory() },
+      { icon: '\uD83D\uDFE2', label: 'Load Safe Scenario', shortcut: '1', action: () => setScenario('safe') },
+      { icon: '\uD83D\uDD34', label: 'Load Phishing Scenario', shortcut: '2', action: () => setScenario('phishing') },
+      { icon: '\uD83D\uDFE1', label: 'Load Vishing Scenario', shortcut: '3', action: () => setScenario('vishing') },
+      { icon: '\uD83D\uDFE3', label: 'Load Urgent Scenario', shortcut: '4', action: () => setScenario('urgent') },
+      { icon: '\uD83C\uDFA8', label: 'Theme: Cyan', action: () => setTheme('cyan') },
+      { icon: '\uD83C\uDFA8', label: 'Theme: Emerald', action: () => setTheme('emerald') },
+      { icon: '\uD83C\uDFA8', label: 'Theme: Sentinel', action: () => setTheme('sentinel') },
+      { icon: '\uD83C\uDFA8', label: 'Theme: Amber', action: () => setTheme('amber') },
+      { icon: '\uD83C\uDFA8', label: 'Theme: Phantom', action: () => setTheme('phantom') },
+      { icon: '\u2753', label: 'Keyboard Shortcuts', shortcut: '?', action: () => toggleShortcuts() },
+    ];
+    function openPalette() { const p = document.getElementById('command-palette'); p.classList.add('open'); const i = document.getElementById('palette-input'); i.value = ''; i.focus(); renderPaletteResults(''); }
+    function closePalette() { document.getElementById('command-palette').classList.remove('open'); }
+    function renderPaletteResults(q) {
+      const c = document.getElementById('palette-results');
+      const f = commands.filter(c => c.label.toLowerCase().includes(q.toLowerCase()));
+      c.innerHTML = f.map((cmd, i) => `<div class="palette-item ${i===0?'active':''}" role="option" onclick="executePaletteCommand(${commands.indexOf(cmd)})"><span class="icon">${cmd.icon}</span><span class="label">${cmd.label}</span>${cmd.shortcut?`<span class="shortcut">${cmd.shortcut}</span>`:''}</div>`).join('');
+    }
+    function executePaletteCommand(i) { closePalette(); commands[i].action(); }
+    document.getElementById('palette-input').addEventListener('input', e => renderPaletteResults(e.target.value));
+    document.getElementById('palette-input').addEventListener('keydown', e => {
+      if (e.key === 'Escape') closePalette();
+      if (e.key === 'Enter') { const a = document.querySelector('.palette-item.active'); if (a) a.click(); }
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault(); const items = [...document.querySelectorAll('.palette-item')];
+        const cur = items.findIndex(i => i.classList.contains('active'));
+        items.forEach(i => i.classList.remove('active'));
+        const next = e.key === 'ArrowDown' ? (cur+1) % items.length : (cur-1+items.length) % items.length;
+        if (items[next]) { items[next].classList.add('active'); items[next].scrollIntoView({block:'nearest'}); }
+      }
+    });
+    document.getElementById('command-palette').addEventListener('click', e => { if (e.target.id === 'command-palette') closePalette(); });
+
+    /* ═══════════════════ SHORTCUTS OVERLAY ═══════════════════ */
+    function toggleShortcuts() { document.getElementById('shortcuts-overlay').classList.toggle('open'); }
+    window.toggleShortcuts = toggleShortcuts;
+    document.getElementById('shortcuts-overlay').addEventListener('click', e => { if (e.target.id === 'shortcuts-overlay') toggleShortcuts(); });
+
+    /* ═══════════════════ BOOT SEQUENCE ═══════════════════ */
+    const bootLines = ["INITIALIZING NEURAL CORE...", "LOADING SCAMGUARD v5.0 KERNEL...", "CALIBRATING MULTILINGUAL NLP MODELS...", "ESTABLISHING SECURE CHANNEL...", "THREAT MATRIX ONLINE...", "VOICE INTERFACE READY...", "SYSTEM READY."];
+    let bootStep = 0;
+    function spawnBootParticles() {
+      for (let i = 0; i < 30; i++) {
+        const p = document.createElement('div'); p.className = 'boot-particle';
+        p.style.left = Math.random() * 100 + '%';
+        p.style.animation = `float-up ${3 + Math.random() * 4}s linear ${Math.random() * 2}s forwards`;
+        document.body.appendChild(p); setTimeout(() => p.remove(), 7000);
+      }
+    }
+    spawnBootParticles();
     function typeBootLine() {
       if (bootStep >= bootLines.length) return;
-      const div = document.createElement('div');
-      div.className = "text-primary mb-1";
-      els.bootLog.appendChild(div);
-      
+      const div = document.createElement('div'); div.className = "text-primary mb-1"; els.bootLog.appendChild(div);
       let i = 0; const line = bootLines[bootStep];
-      const interval = setInterval(() => {
-        div.textContent = line.substring(0, i); i++;
-        if (i > line.length) {
-          clearInterval(interval); bootStep++; typeBootLine();
-        }
-      }, 40);
+      const interval = setInterval(() => { div.textContent = line.substring(0, i); i++; if (i > line.length) { clearInterval(interval); bootStep++; typeBootLine(); } }, 35);
     }
     setTimeout(typeBootLine, 500);
 
-    // Click to Initialize
-    els.overlay.addEventListener('click', async () => {
-      try {
-        initAudio();
-        if ('speechSynthesis' in window) {
-          const msg = new SpeechSynthesisUtterance("Neural link established. System ready.");
-          msg.volume = 0.8; msg.rate = 1; speechSynthesis.speak(msg);
-        }
-      } catch (e) { console.warn("Audio init failed", e); }
+    // Auto-skip boot after 5 seconds
+    let bootAutoSkip = setTimeout(initializeDashboard, 5000);
 
+    function initializeDashboard() {
+      if (isInitialized) return;
+      clearTimeout(bootAutoSkip);
+      try { initAudio(); if ('speechSynthesis' in window) { const msg = new SpeechSynthesisUtterance("Neural link established. System ready."); msg.volume = 0.7; msg.rate = 0.95; msg.pitch = 0.8; speechSynthesis.speak(msg); } } catch(e) {}
       gsap.to(els.overlay, { opacity: 0, duration: 1, delay: 0.2, onComplete: () => els.overlay.style.display = 'none' });
       gsap.to(els.dashboard, { opacity: 1, duration: 1, delay: 0.5, onComplete: () => {
         els.dashboard.classList.remove('pointer-events-none');
         isInitialized = true;
         els.sessionDisplay.textContent = sessionId;
-        initParticles();
-        initParallax();
+        sessionStartTime = Date.now();
+        initParticles(); initParallax(); initSparkline(); initNeuralViz();
         connectWebSocket();
+        fetchModelAccuracy();
+        showToast('Neural link established. System operational.', 'success');
       }});
-    });
+    }
 
-    /* =========================================
-       AUDIO ENGINE
-    ========================================= */
+    els.overlay.addEventListener('click', initializeDashboard);
+    document.getElementById('btn-skip-boot').addEventListener('click', (e) => { e.stopPropagation(); initializeDashboard(); });
+
+    /* ═══════════════════ AUDIO ENGINE ═══════════════════ */
+    let humOsc, humGain, humFilter;
     function initAudio() {
-      if(audioCtx) return;
+      if (audioCtx) return;
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       analyser = audioCtx.createAnalyser();
-      
-      // Mic setup
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (SpeechRecognition) {
         recognition = new SpeechRecognition();
         recognition.continuous = false; recognition.lang = 'en-US';
-        recognition.onresult = (e) => {
-          els.input.value = e.results[0][0].transcript;
-          sendChunk(els.input.value); els.input.value = '';
-          stopListening();
-        };
+        recognition.onresult = e => { els.input.value = e.results[0][0].transcript; sendChunk(els.input.value); els.input.value = ''; stopListening(); };
         recognition.onend = stopListening;
       }
-
       startHum();
     }
-
-    let humOsc, humGain;
     function startHum() {
       humOsc = audioCtx.createOscillator();
       humGain = audioCtx.createGain();
-      const filter = audioCtx.createBiquadFilter();
-      
-      humOsc.type = 'sine'; humOsc.frequency.value = 50; // Low hum
-      filter.type = 'lowpass'; filter.frequency.value = 200;
-      
-      humOsc.connect(filter);
-      filter.connect(humGain);
-      humGain.connect(audioCtx.destination);
-      humGain.gain.value = isAudioEnabled ? 0.03 : 0;
+      humFilter = audioCtx.createBiquadFilter();
+      humOsc.type = 'sine'; humOsc.frequency.value = 50;
+      humFilter.type = 'lowpass'; humFilter.frequency.value = 200;
+      humOsc.connect(humFilter); humFilter.connect(humGain); humGain.connect(audioCtx.destination);
+      humGain.gain.value = isAudioEnabled ? 0.025 : 0;
       humOsc.start();
     }
-
     function updateHumIntensity(threatLevel) {
       if (!humOsc || !audioCtx) return;
-      // Hum gets louder and pitch shifts up slightly with threat
-      const targetGain = isAudioEnabled ? 0.03 + (threatLevel * 0.0005) : 0;
-      const targetPitch = 50 + (threatLevel * 0.5);
-      humGain.gain.setTargetAtTime(targetGain, audioCtx.currentTime, 0.1);
-      humOsc.frequency.setTargetAtTime(targetPitch, audioCtx.currentTime, 0.1);
+      const t = audioCtx.currentTime;
+      humGain.gain.setTargetAtTime(isAudioEnabled ? 0.025 + (threatLevel * 0.0006) : 0, t, 0.1);
+      humOsc.frequency.setTargetAtTime(50 + (threatLevel * 0.8), t, 0.1);
+      if (threatLevel > 70 && humOsc.type !== 'sawtooth') humOsc.type = 'sawtooth';
+      else if (threatLevel <= 70 && threatLevel > 40 && humOsc.type !== 'triangle') humOsc.type = 'triangle';
+      else if (threatLevel <= 40 && humOsc.type !== 'sine') humOsc.type = 'sine';
     }
-
     function playTone(type) {
       if (!audioCtx || !isAudioEnabled) return;
       if (audioCtx.state === 'suspended') audioCtx.resume();
-      
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.connect(gain); gain.connect(audioCtx.destination);
+      const osc = audioCtx.createOscillator(), gain = audioCtx.createGain(), panner = audioCtx.createStereoPanner();
+      panner.pan.value = type === 'click' ? -0.3 : type === 'drop' ? 0 : 0.3;
+      osc.connect(gain); gain.connect(panner); panner.connect(audioCtx.destination);
       const now = audioCtx.currentTime;
-      
-      if (type === 'click') {
-        osc.type = 'sine'; osc.frequency.setValueAtTime(800, now);
-        gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
-      } else if (type === 'alert') {
-        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(220, now); osc.frequency.linearRampToValueAtTime(110, now + 0.2);
-        gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0, now + 0.2);
-      } else if (type === 'drop') {
-        osc.type = 'square'; osc.frequency.setValueAtTime(150, now); osc.frequency.linearRampToValueAtTime(50, now + 0.4);
-        gain.gain.setValueAtTime(0.15, now); gain.gain.linearRampToValueAtTime(0, now + 0.4);
-      }
-      osc.start(now); osc.stop(now + 0.5);
+      if (type === 'click') { osc.type = 'sine'; osc.frequency.setValueAtTime(800, now); gain.gain.setValueAtTime(0.04, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05); }
+      else if (type === 'alert') { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(220, now); osc.frequency.linearRampToValueAtTime(110, now + 0.2); gain.gain.setValueAtTime(0.08, now); gain.gain.linearRampToValueAtTime(0, now + 0.2); }
+      else if (type === 'drop') { osc.type = 'square'; osc.frequency.setValueAtTime(150, now); osc.frequency.linearRampToValueAtTime(40, now + 0.5); gain.gain.setValueAtTime(0.12, now); gain.gain.linearRampToValueAtTime(0, now + 0.5); }
+      else if (type === 'success') { osc.type = 'sine'; osc.frequency.setValueAtTime(523, now); osc.frequency.setValueAtTime(659, now + 0.1); gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2); }
+      osc.start(now); osc.stop(now + 0.6);
     }
-
-    function speak(text) {
+    function speak(text, robotic = false) {
       if (!isAudioEnabled || !('speechSynthesis' in window)) return;
-      const msg = new SpeechSynthesisUtterance(text); msg.volume = 0.5; msg.rate = 1.1;
+      const msg = new SpeechSynthesisUtterance(text);
+      msg.volume = 0.6; msg.rate = robotic ? 0.8 : 1.1; msg.pitch = robotic ? 0.5 : 1.0;
       speechSynthesis.speak(msg);
     }
-
-    window.toggleAudio = (state) => {
+    window.toggleAudio = state => {
       isAudioEnabled = state;
-      if (humGain) humGain.gain.setTargetAtTime(state ? 0.03 : 0, audioCtx.currentTime, 0.1);
+      if (humGain) humGain.gain.setTargetAtTime(state ? 0.025 : 0, audioCtx.currentTime, 0.1);
+      showToast(`Audio ${state ? 'enabled' : 'disabled'}`, 'info', 2000);
     };
-
     function startListening() {
-      if (!recognition) return;
-      try { recognition.start(); els.visContainer.classList.remove('hidden'); } catch(e){}
+      if (!recognition) { showToast('Speech recognition not supported', 'warn'); return; }
+      try { recognition.start(); els.visContainer.classList.remove('hidden'); showToast('Listening...', 'info', 2000); } catch(e) {}
     }
     function stopListening() {
-      if (recognition) try { recognition.stop(); } catch(e){}
+      if (recognition) try { recognition.stop(); } catch(e) {}
       els.visContainer.classList.add('hidden');
     }
 
-    /* =========================================
-       WEBSOCKET LOGIC (PRESERVED & ENHANCED)
-    ========================================= */
+    /* ═══════════════════ JARVIS VOICE MODE ═══════════════════ */
+    function toggleJarvisMode() {
+      jarvisActive = !jarvisActive;
+      const indicator = document.getElementById('voice-indicator');
+      const status = document.getElementById('voice-status');
+      if (jarvisActive) {
+        indicator.classList.add('active');
+        status.textContent = 'SAY "HEY SCAMGUARD"';
+        speak('Voice mode activated. Say Hey ScamGuard to begin.');
+        showToast('Jarvis mode ON - Say "Hey ScamGuard"', 'success');
+        startJarvisListener();
+      } else {
+        indicator.classList.remove('active');
+        if (jarvisRecognition) try { jarvisRecognition.stop(); } catch(e) {}
+        speak('Voice mode deactivated.');
+        showToast('Jarvis mode OFF', 'info', 2000);
+      }
+    }
+    function startJarvisListener() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) { showToast('Speech API not supported', 'warn'); return; }
+      jarvisRecognition = new SR();
+      jarvisRecognition.continuous = true; jarvisRecognition.interimResults = false; jarvisRecognition.lang = 'en-US';
+      jarvisRecognition.onresult = e => {
+        const last = e.results[e.results.length - 1];
+        if (!last.isFinal) return;
+        const text = last[0].transcript.toLowerCase().trim();
+        const status = document.getElementById('voice-status');
+        if (text.includes('hey scamguard') || text.includes('hey scam guard')) {
+          status.textContent = 'YES, I\'M LISTENING...';
+          speak('Yes, I\'m listening.', true);
+          setTimeout(() => { status.textContent = 'AWAITING COMMAND...'; }, 1500);
+        } else if (text.startsWith('analyze') || text.startsWith('analyse')) {
+          const sentence = text.replace(/^analy[sz]e\s*(this)?:?\s*/i, '');
+          if (sentence) { els.input.value = sentence; triggerShockwave(); sendChunk(sentence); els.input.value = ''; speak('Analyzing: ' + sentence.substring(0, 30), true); status.textContent = 'ANALYZING...'; }
+        } else if (text.includes('reset session') || text.includes('reset')) {
+          if (ws && ws.readyState === 1) ws.send(JSON.stringify({type:'reset'})); else resetUI();
+          speak('Session reset.', true);
+        } else if (text.includes('show report') || text.includes('export report')) {
+          exportReport(); speak('Report exported.', true);
+        } else { status.textContent = 'SAY "HEY SCAMGUARD"'; }
+      };
+      jarvisRecognition.onend = () => { if (jarvisActive) setTimeout(() => { try { jarvisRecognition.start(); } catch(e) {} }, 500); };
+      jarvisRecognition.onerror = () => { if (jarvisActive) setTimeout(() => { try { jarvisRecognition.start(); } catch(e) {} }, 1000); };
+      try { jarvisRecognition.start(); } catch(e) {}
+    }
+
+    /* ═══════════════════ WEBSOCKET ═══════════════════ */
     function connectWebSocket() {
       if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
-      
       ws = new WebSocket(`${WS_URL}${sessionId}`);
-      
       ws.onopen = () => {
         els.wsDot.className = "w-2 h-2 rounded-full bg-green-400 shadow-[0_0_8px_#4ade80]";
-        els.wsText.textContent = "ONLINE";
-        els.modelDisplay.textContent = "DISTILBERT";
-        playTone('click');
+        els.wsText.textContent = "ONLINE"; els.wsText.className = "text-[10px] font-bold text-green-400 uppercase tracking-wider";
+        playTone('success'); showToast('WebSocket connected. Backend online.', 'success');
       };
-      
       ws.onclose = () => {
         els.wsDot.className = "w-2 h-2 rounded-full bg-red-500 animate-pulse";
-        els.wsText.textContent = "OFFLINE";
+        els.wsText.textContent = "OFFLINE"; els.wsText.className = "text-[10px] font-bold text-red-400 uppercase tracking-wider";
+        showToast('Connection lost. Reconnecting...', 'warn');
         setTimeout(connectWebSocket, 3000);
       };
-
-      ws.onmessage = (e) => {
-        try { processResponse(JSON.parse(e.data)); } catch (err) { console.error("JSON error", err); }
-      };
+      ws.onerror = () => showToast('WebSocket error. Check backend server.', 'danger');
+      ws.onmessage = e => { try { processResponse(JSON.parse(e.data)); } catch(err) { console.error("JSON error", err); } };
     }
 
     function sendChunk(text) {
-      if (!text.trim() || !ws || ws.readyState !== 1) {
-        console.warn("Cannot send chunk."); return;
-      }
+      if (!text.trim()) { showToast('Please enter text to analyze', 'warn', 2000); return; }
+      if (!ws || ws.readyState !== 1) { showToast('Not connected to backend. Retrying...', 'warn'); connectWebSocket(); return; }
       els.logPlaceholder.style.display = 'none';
+      // Show skeleton loader
+      addSkeletonLoader();
+      els.scanLine.style.width = '0%';
+      requestAnimationFrame(() => { els.scanLine.style.width = '100%'; setTimeout(() => els.scanLine.style.width = '0%', 1500); });
       ws.send(JSON.stringify({ type: 'chunk', text: text }));
-      
-      // Optimistic Log
-      addLogEntry(text, 'analyzing', 0, 0, false);
+    }
+
+    function addSkeletonLoader() {
+      const div = document.createElement('div');
+      div.id = 'skeleton-active';
+      div.className = "p-3 rounded border border-gray-800 bg-black/40";
+      div.innerHTML = `
+        <div class="flex justify-between mb-2">
+          <div class="skeleton-loader h-3 w-32"></div>
+          <div class="skeleton-loader h-3 w-20"></div>
+        </div>
+        <div class="skeleton-loader h-4 w-full mb-2"></div>
+        <div class="skeleton-loader h-4 w-3/4"></div>
+      `;
+      els.logContainer.appendChild(div);
+      els.logContainer.scrollTop = els.logContainer.scrollHeight;
+    }
+
+    function removeSkeletonLoader() {
+      const sk = document.getElementById('skeleton-active');
+      if (sk) sk.remove();
     }
 
     function processResponse(data) {
-      if (data.type === 'reset_ack') {
-        resetUI(); return;
-      }
+      if (data.type === 'reset_ack') { resetUI(); showToast('Session reset successfully', 'success'); return; }
+      if (data.type === 'thresholds_ack' || data.type === 'pong' || data.type === 'timeout') return;
+      if (data.type === 'error') { removeSkeletonLoader(); showToast(data.message || 'Analysis error', 'danger'); return; }
+
+      removeSkeletonLoader();
 
       const threatPct = data.ct_percent || 0;
       currentThreatLevel = threatPct;
       updateHumIntensity(threatPct);
+      updateChromaticAberration(threatPct);
 
-      // Update Gauge
-      els.meter.style.width = `${threatPct}%`;
-      els.ctScore.textContent = (data.cumulative_ct || 0).toFixed(3);
-      
-      // Update Ring (NLP Confidence)
+      gsap.to(els.meter, { width: threatPct + '%', duration: 0.6, ease: "elastic.out(1, 0.5)" });
+      const ctVal = (data.cumulative_ct || 0).toFixed(3);
+      animateCounter(els.ctScore, ctVal);
+
       const nlpConf = data.nlp_confidence || 0;
       els.nlpVal.textContent = `${nlpConf}%`;
       els.ring.style.setProperty('--ring-pct', `${nlpConf}%`);
-      
-      // Update Stats
+
       els.latVal.textContent = Math.floor(data.latency_ms || 0);
       els.kwVal.textContent = data.keyword_weight || 0;
-      
+
+      // FIXED: Show real NLP confidence instead of random number
+      els.accuracyVal.textContent = nlpConf > 0 ? `${nlpConf.toFixed(1)}%` : '--';
+
       chunkCount++;
-      els.statChunks.textContent = chunkCount;
-      if (data.is_scam) {
-        scamCount++; els.statThreats.textContent = scamCount;
-      }
+      animateCounter(els.statChunks, chunkCount);
+      if (data.is_scam) { scamCount++; animateCounter(els.statThreats, scamCount); }
 
       totalLatency += data.latency_ms || 0;
       els.statLat.textContent = Math.floor(totalLatency / chunkCount) + 'ms';
 
-      // Status Handling
+      threatHistory.push(threatPct);
+      drawSparkline(); addHeatmapCell(threatPct); updateRadarDots(threatPct);
+
+      analysisResults.push({ is_scam: data.is_scam, confidence: nlpConf, text: data.text || '' });
+      if (devModeActive) updateConfusionMatrix();
+
+      document.getElementById('settings-chunks').textContent = chunkCount;
+      document.getElementById('settings-threats').textContent = scamCount;
+      document.getElementById('settings-session').textContent = sessionId;
+
+      // Save to history
+      saveToHistory(data.text || '', data);
+
       let status = data.status || 'SAFE';
-      let statusColor = 'text-green-400';
       els.statusBadge.textContent = status;
       els.statState.textContent = status === 'SAFE' ? 'MON' : status;
 
       if (status === 'ALERT') {
+        if ("Notification" in window && Notification.permission === "granted") new Notification('ScamGuard Warning', {body: `Suspicious activity detected! Score: ${threatPct.toFixed(1)}%`});
         els.statusBadge.className = "px-2 py-0.5 rounded bg-amber-900/50 text-amber-400 text-[10px] border border-amber-500/30";
         els.statState.className = "text-lg font-bold text-amber-400";
         playTone('alert'); speak("Alert. Threat detected.");
+        showToast(`\u26A0 Threat detected! Score: ${threatPct.toFixed(1)}%`, 'warn');
       } else if (status === 'DROP') {
+        if ("Notification" in window && Notification.permission === "granted") new Notification('ScamGuard Critical', {body: 'Critical threat identified! Call terminated.'});
         els.statusBadge.className = "px-2 py-0.5 rounded bg-red-900/50 text-red-400 text-[10px] border border-red-500/30 glitch-active";
         els.statState.className = "text-lg font-bold text-red-500 glitch-active";
-        playTone('drop'); speak("Critical threat. Auto-drop initiated.");
-        triggerGlitch();
+        playTone('drop'); speak("Critical threat neutralized. Call terminated.", true);
+        triggerGlitch(); showToast('\uD83D\uDEA8 CRITICAL: Call terminated!', 'danger', 6000);
+        disconnectCall(data);
       } else {
         els.statusBadge.className = "px-2 py-0.5 rounded bg-green-900/50 text-green-400 text-[10px] border border-green-500/30";
         els.statState.className = "text-lg font-bold text-green-400";
       }
 
-      // Update Last Log Entry
-      const lastLog = els.logContainer.lastElementChild;
-      if (lastLog && lastLog.dataset.chunk) {
-        updateLogEntry(lastLog, status, threatPct, data.is_scam);
-      }
+      // Add proper log entry with keyword highlighting
+      addLogEntryComplete(data);
     }
 
+    /* ═══════════════════ ANIMATED COUNTER ═══════════════════ */
+    function animateCounter(el, value) { el.textContent = value; el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 400); }
+
     function sendThresholds() {
-      if (ws && ws.readyState === 1) {
-        ws.send(JSON.stringify({ 
-          type: 'set_thresholds', 
-          alert: thresholds.alert, 
-          drop: thresholds.drop 
-        }));
-      }
+      if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'set_thresholds', alert: thresholds.alert, drop: thresholds.drop }));
     }
 
     function resetUI() {
       chunkCount = 0; scamCount = 0; totalLatency = 0;
-      els.statChunks.textContent = '0'; els.statThreats.textContent = '0';
-      els.statLat.textContent = '0ms';
-      els.meter.style.width = '0%'; els.ctScore.textContent = '0.000';
+      threatHistory = []; heatmapData = []; analysisResults = [];
+      currentThreatLevel = 0; sessionStartTime = Date.now();
+      els.statChunks.textContent = '0'; els.statThreats.textContent = '0'; els.statLat.textContent = '0ms';
+      gsap.to(els.meter, { width: '0%', duration: 0.5 });
+      els.ctScore.textContent = '0.000';
       els.nlpVal.textContent = '0.0%'; els.ring.style.setProperty('--ring-pct', '0%');
       els.statusBadge.textContent = 'SAFE';
-      els.logContainer.innerHTML = '';
+      els.statusBadge.className = "px-2 py-0.5 rounded bg-green-900/50 text-green-400 text-[10px] border border-green-500/30";
+      els.statState.textContent = 'MON'; els.statState.className = "text-lg font-bold text-green-400";
+      els.accuracyVal.textContent = '--';
+      els.logContainer.querySelectorAll('[data-chunk]').forEach(e => e.remove());
+      removeSkeletonLoader();
       els.logPlaceholder.style.display = 'flex';
-      playTone('click');
-      speak("Session reset.");
+      drawSparkline(); renderHeatmap(); updateRadarDots(0);
+      updateChromaticAberration(0);
+      playTone('click'); speak("Session reset.");
     }
 
-    /* =========================================
-       UI LOGIC & ANIMATIONS
-    ========================================= */
-    function addLogEntry(text, status, pct, kw, isScam) {
+    /* ═══════════════════ DROP HANDLER ═══════════════════ */
+    let _dropTimer = null;
+    function disconnectCall(data) {
+      const kws = (data.matched_keywords || []).map(k => k.word.toUpperCase()).join(', ');
+      const reason = kws ? `Triggered by: ${kws} | CT = ${(data.cumulative_ct || 0).toFixed(3)}` : `Cumulative threat: ${(data.ct_percent || 0).toFixed(1)}%`;
+      els.dropReason.textContent = reason;
+      els.dropOverlay.classList.add('visible');
+      els.input.disabled = true;
+      document.getElementById('btn-analyze').disabled = true;
+      els.input.classList.add('opacity-40', 'cursor-not-allowed');
+      if (_dropTimer) clearTimeout(_dropTimer);
+      _dropTimer = setTimeout(dismissDrop, 8000);
+    }
+    function dismissDrop() {
+      if (_dropTimer) { clearTimeout(_dropTimer); _dropTimer = null; }
+      els.dropOverlay.classList.remove('visible');
+      els.input.disabled = false; document.getElementById('btn-analyze').disabled = false;
+      els.input.classList.remove('opacity-40', 'cursor-not-allowed');
+      if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'reset' })); else resetUI();
+    }
+    window.dismissDrop = dismissDrop;
+
+    /* ═══════════════════ LOG ENTRIES WITH KEYWORD HIGHLIGHTING ═══════════════════ */
+    function highlightKeywords(text, matchedKeywords) {
+      if (!matchedKeywords || matchedKeywords.length === 0) return escapeHtml(text);
+      let result = escapeHtml(text);
+      // Sort by length (longest first) to avoid partial replacements
+      const sorted = [...matchedKeywords].sort((a, b) => b.word.length - a.word.length);
+      sorted.forEach(kw => {
+        const cls = kw.tier === 'CRITICAL' ? 'kw-critical' : kw.tier === 'HIGH' ? 'kw-high' : 'kw-medium';
+        const regex = new RegExp(`(${escapeRegex(escapeHtml(kw.word))})`, 'gi');
+        result = result.replace(regex, `<span class="${cls}" title="${kw.tier} (weight: ${kw.weight})">$1</span>`);
+      });
+      return result;
+    }
+
+    function escapeRegex(str) { return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+    function addLogEntryComplete(data) {
       const div = document.createElement('div');
       div.dataset.chunk = "true";
-      div.className = "p-3 rounded border border-gray-800 bg-black/40 relative overflow-hidden group";
+      const statusColor = data.status === 'DROP' ? 'text-red-500 glitch-active' : data.status === 'ALERT' ? 'text-amber-400' : 'text-green-400';
+      const borderColor = data.status === 'DROP' ? 'border-red-800/60' : data.status === 'ALERT' ? 'border-amber-800/40' : 'border-gray-800';
+
+      div.className = `p-3 rounded border ${borderColor} bg-black/40 relative overflow-hidden group`;
       div.innerHTML = `
         <div class="flex justify-between text-[10px] text-gray-500 mb-2 font-mono">
-          <span>${new Date().toLocaleTimeString()} <span class="text-gray-700 mx-1">|</span> CHUNK #${chunkCount}</span>
-          <span class="status-text text-amber-400">PROCESSING...</span>
+          <span>${new Date().toLocaleTimeString()} <span class="text-gray-700 mx-1">|</span> CHUNK #${data.chunk_number || chunkCount}</span>
+          <span class="${statusColor}">${data.status || 'SAFE'}</span>
         </div>
-        <div class="text-sm text-gray-200 font-mono truncate log-content">${text}</div>
-        <div class="log-details hidden mt-2 flex gap-4 text-[10px] font-mono opacity-0 group-hover:opacity-100 transition-opacity">
-          <span class="text-gray-500">SCORE: <span class="val-pct text-gray-300">0%</span></span>
-          <span class="text-gray-500">KW: <span class="val-kw text-gray-300">0</span></span>
-          <span class="text-gray-500">RES: <span class="val-res text-gray-300">--</span></span>
+        <div class="text-sm text-gray-200 font-mono log-content">${highlightKeywords(data.text || '', data.matched_keywords || [])}</div>
+        ${data.explanation && data.explanation !== 'N/A' ? `<div class="text-[11px] text-cyan-400/80 italic mt-2 border-l-2 border-cyan-800/50 pl-2">${escapeHtml(data.explanation)}</div>` : ''}
+        <div class="mt-2 flex gap-4 text-[10px] font-mono opacity-60 group-hover:opacity-100 transition-opacity">
+          <span class="text-gray-500">CT: <span class="text-gray-300">${(data.ct_percent || 0).toFixed(1)}%</span></span>
+          <span class="text-gray-500">KW: <span class="text-gray-300">${data.keyword_weight || 0}</span></span>
+          <span class="text-gray-500">NLP: <span class="text-gray-300">${data.nlp_label || 'N/A'}</span></span>
+          <span class="text-gray-500">LAT: <span class="text-gray-300">${Math.floor(data.latency_ms || 0)}ms</span></span>
         </div>
       `;
+      div.style.opacity = '0'; div.style.transform = 'translateX(20px)';
       els.logContainer.appendChild(div);
+      requestAnimationFrame(() => { div.style.transition = 'all 0.3s ease-out'; div.style.opacity = '1'; div.style.transform = 'translateX(0)'; });
       els.logContainer.scrollTop = els.logContainer.scrollHeight;
+
+      if (data.status === 'ALERT' || data.status === 'DROP') {
+        div.classList.add('threat-pulse');
+        setTimeout(() => div.classList.remove('threat-pulse'), 1500);
+      }
       playTone('click');
     }
 
-    function updateLogEntry(div, status, pct, isScam) {
-      div.querySelector('.status-text').textContent = status;
-      div.querySelector('.status-text').className = `status-text ${status === 'SAFE' ? 'text-green-400' : status === 'ALERT' ? 'text-amber-400' : 'text-red-500 glitch-active'}`;
-      div.querySelector('.val-pct').textContent = pct.toFixed(1) + '%';
-      div.querySelector('.val-kw').textContent = Math.floor(pct / 10);
-      div.querySelector('.val-res').textContent = isScam ? 'MALICIOUS' : 'CLEAN';
-      div.querySelector('.log-details').classList.remove('hidden');
-      gsap.to(div.querySelector('.log-details'), { opacity: 1, height: 'auto', duration: 0.3 });
-      
-      // Border highlight
-      div.style.borderColor = status === 'DROP' ? 'rgba(255,50,80,0.6)' : status === 'ALERT' ? 'rgba(255,170,0,0.4)' : 'rgba(0,255,255,0.2)';
-    }
+    function escapeHtml(text) { const d = document.createElement('div'); d.textContent = text; return d.innerHTML; }
 
     function triggerGlitch() {
-      els.glitch.style.opacity = '1';
-      els.glitch.style.animation = 'glitch-skew 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) 3';
+      els.glitch.style.opacity = '1'; els.glitch.style.animation = 'glitch-skew 0.3s cubic-bezier(0.25,0.46,0.45,0.94) 3';
       document.body.classList.add('shake-active');
       setTimeout(() => { els.glitch.style.opacity = '0'; els.glitch.style.animation = 'none'; document.body.classList.remove('shake-active'); }, 1000);
     }
-
-    function triggerShockwave() {
-      gsap.fromTo(els.shockwave, { scale: 0, opacity: 1 }, { scale: 3, opacity: 0, duration: 0.8, ease: "power2.out" });
-    }
+    function triggerShockwave() { gsap.fromTo(els.shockwave, { scale: 0, opacity: 1 }, { scale: 3, opacity: 0, duration: 0.8, ease: "power2.out" }); }
 
     function setScenario(type) {
       const texts = {
-        safe: "Hey, are we still meeting for coffee tomorrow? I need to discuss the project.",
-        phishing: "URGENT: Your account has been compromised. Click here to verify your details immediately.",
-        vishing: "This is the police. We have a warrant for your arrest. Transfer funds to the safe account to clear your name."
+        safe: "Hey bhai, kal office kitne baje aana hai? Project discuss karna tha.",
+        phishing: "Sir main sbi branch se bol raha hu, aapka khata band hone wala hai. Turant OTP batayein verification ke liye.",
+        vishing: "This is the police department. We have a warrant for your arrest. Transfer fines to the safe account immediately or face jail.",
+        urgent: "Aakhri mauka! Your policy will expire today. Download anydesk right now to claim your refund."
       };
-      els.input.value = texts[type] || "";
-      playTone('click');
+      els.input.value = texts[type] || ""; playTone('click'); showToast(`Loaded ${type} scenario`, 'info', 2000);
     }
     window.setScenario = setScenario;
 
-    /* =========================================
-       THREE.JS PARTICLES & GRID
-    ========================================= */
+    /* ═══════════════════ EXPORT REPORT ═══════════════════ */
+    function exportReport() {
+      const reportDiv = document.createElement('div');
+      reportDiv.innerHTML = `
+        <div style="font-family: Arial, sans-serif; padding: 40px; color: #111;">
+          <h1 style="color: #004466; border-bottom: 2px solid #004466; padding-bottom: 10px;">ScamGuard v${APP_VERSION} Analysis Report</h1>
+          <p><strong>Session ID:</strong> ${sessionId}</p>
+          <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+          <p><strong>Duration:</strong> ${els.statUptime.textContent}</p>
+          <h3 style="margin-top: 30px; color: #333;">Summary Metrics</h3>
+          <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+            <tr style="background: #f4f4f4;"><th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Metric</th><th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Value</th></tr>
+            <tr><td style="padding: 10px; border: 1px solid #ddd;">Total Chunks</td><td style="padding: 10px; border: 1px solid #ddd;">${chunkCount}</td></tr>
+            <tr><td style="padding: 10px; border: 1px solid #ddd;">Threats Detected</td><td style="padding: 10px; border: 1px solid #ddd;">${scamCount}</td></tr>
+            <tr><td style="padding: 10px; border: 1px solid #ddd;">Peak Threat</td><td style="padding: 10px; border: 1px solid #ddd;">${Math.max(0, ...threatHistory).toFixed(1)}%</td></tr>
+            <tr><td style="padding: 10px; border: 1px solid #ddd;">CT Score</td><td style="padding: 10px; border: 1px solid #ddd;">${els.ctScore.textContent}</td></tr>
+          </table>
+          <h3 style="margin-top: 30px; color: #333;">Analyzed Transcript</h3>
+          <div style="background: #f9f9f9; padding: 15px; border-left: 4px solid #00aaff; font-family: monospace; white-space: pre-wrap; font-size: 12px;">${Array.from(els.logContainer.querySelectorAll('.log-content')).map(el => el.textContent).join('\n')}</div>
+          <p style="margin-top: 50px; font-size: 12px; color: #777; text-align: center;">Generated by ScamGuard v${APP_VERSION} | Manipal University Jaipur</p>
+        </div>
+      `;
+      html2pdf().set({ margin: 1, filename: `scamguard-report-${sessionId}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } }).from(reportDiv).save();
+      playTone('success'); showToast('PDF Report exported successfully', 'success');
+    }
+
+    /* ═══════════════════ THREE.JS — OPTIMIZED (Pause when hidden) ═══════════════════ */
     function initParticles() {
       const canvas = document.createElement('canvas');
       document.getElementById('canvas-bg').appendChild(canvas);
       const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 200);
-      camera.position.set(0, 15, 20); camera.lookAt(0, 0, 0);
+      camera.position.set(0, 12, 25); camera.lookAt(0, 0, 0);
 
-      // Grid Floor
-      const grid = new THREE.GridHelper(200, 50, 0x004466, 0x001133);
-      grid.position.y = -5;
-      grid.material.opacity = 0.4;
-      grid.material.transparent = true;
-      scene.add(grid);
+      const icoGeo = new THREE.IcosahedronGeometry(8, 1);
+      const icoMat = new THREE.MeshBasicMaterial({ color: 0x004466, wireframe: true, transparent: true, opacity: 0.15 });
+      const icosphere = new THREE.Mesh(icoGeo, icoMat);
+      icosphere.position.y = 2; scene.add(icosphere);
 
-      // Particles
-      const count = 150;
-      const positions = new Float32Array(count * 3);
-      const velocities = [];
-      
-      for(let i=0; i<count; i++) {
-        positions[i*3] = (Math.random() - 0.5) * 40;
-        positions[i*3+1] = (Math.random() - 0.5) * 30;
-        positions[i*3+2] = (Math.random() - 0.5) * 30;
-        velocities.push({ x: (Math.random()-0.5)*0.05, y: (Math.random()-0.5)*0.02, z: (Math.random()-0.5)*0.05 });
+      const icoGeo2 = new THREE.IcosahedronGeometry(5, 0);
+      const icoMat2 = new THREE.MeshBasicMaterial({ color: 0x00aaff, wireframe: true, transparent: true, opacity: 0.08 });
+      const ico2 = new THREE.Mesh(icoGeo2, icoMat2);
+      ico2.position.y = 2; scene.add(ico2);
+
+      // Reduced particles for performance (120 instead of 200)
+      const helixCount = 120;
+      const helixPos = new Float32Array(helixCount * 3);
+      const helixVel = [];
+      for (let i = 0; i < helixCount; i++) {
+        const t = (i / helixCount) * Math.PI * 6;
+        const r = 12 + Math.sin(t * 0.5) * 4;
+        helixPos[i*3] = Math.cos(t) * r;
+        helixPos[i*3+1] = (i / helixCount - 0.5) * 30;
+        helixPos[i*3+2] = Math.sin(t) * r;
+        helixVel.push({ x: (Math.random()-0.5)*0.02, y: (Math.random()-0.5)*0.01, z: (Math.random()-0.5)*0.02 });
       }
-      
-      const geo = new THREE.BufferGeometry();
-      geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-      const mat = new THREE.PointsMaterial({ color: 0x00f0ff, size: 0.2, transparent: true, opacity: 0.8 });
-      const particles = new THREE.Points(geo, mat);
+      const pGeo = new THREE.BufferGeometry();
+      pGeo.setAttribute('position', new THREE.BufferAttribute(helixPos, 3));
+      const pMat = new THREE.PointsMaterial({ color: 0x00f0ff, size: 0.25, transparent: true, opacity: 0.8 });
+      const particles = new THREE.Points(pGeo, pMat);
       scene.add(particles);
 
-      // Connection Lines
+      const maxLines = 300;
       const lineGeo = new THREE.BufferGeometry();
-      const linePositions = new Float32Array(count * count * 6);
-      lineGeo.setAttribute('position', new THREE.BufferAttribute(linePositions, 3));
-      const lineMat = new THREE.LineBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.15 });
+      const linePos = new Float32Array(maxLines * 6);
+      lineGeo.setAttribute('position', new THREE.BufferAttribute(linePos, 3));
+      const lineMat = new THREE.LineBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.1 });
       const lines = new THREE.LineSegments(lineGeo, lineMat);
       scene.add(lines);
 
-      // Interaction
+      const coneGeo = new THREE.ConeGeometry(3, 25, 8, 1, true);
+      const coneMat = new THREE.MeshBasicMaterial({ color: 0x00aaff, transparent: true, opacity: 0.03, side: THREE.DoubleSide });
+      const cone = new THREE.Mesh(coneGeo, coneMat); cone.position.set(0, 15, 0); scene.add(cone);
+
       const mouse = new THREE.Vector2();
-      window.addEventListener('mousemove', (e) => {
-        mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-        mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      window.addEventListener('mousemove', e => { mouse.x = (e.clientX / window.innerWidth) * 2 - 1; mouse.y = -(e.clientY / window.innerHeight) * 2 + 1; });
+
+      let deviceTilt = { x: 0, y: 0 };
+      window.addEventListener('deviceorientation', e => {
+        if (e.gamma != null) deviceTilt.x = e.gamma / 45;
+        if (e.beta != null) deviceTilt.y = (e.beta - 45) / 45;
       });
 
+      let frameCount = 0;
       function animate() {
         requestAnimationFrame(animate);
+
+        // PERFORMANCE: Skip rendering when tab is hidden
+        if (document.hidden) return;
+
+        frameCount++;
         const pos = particles.geometry.attributes.position.array;
         const lPos = lines.geometry.attributes.position.array;
-        
-        // Color shift based on threat
-        const hue = currentThreatLevel > 70 ? 0.0 : currentThreatLevel > 40 ? 0.1 : 0.5;
+
+        const hue = currentThreatLevel > 70 ? 0.0 : currentThreatLevel > 40 ? 0.08 : 0.52;
         const color = new THREE.Color().setHSL(hue, 0.9, 0.6);
-        mat.color.copy(color);
-        lineMat.color.copy(color);
+        pMat.color.copy(color); lineMat.color.copy(color);
+        icoMat.color.copy(new THREE.Color().setHSL(hue, 0.5, 0.2));
+        icoMat2.color.copy(new THREE.Color().setHSL(hue, 0.6, 0.35));
+        coneMat.color.copy(color);
 
-        let lineIdx = 0;
-        for(let i=0; i<count; i++) {
-          pos[i*3] += velocities[i].x;
-          pos[i*3+1] += velocities[i].y;
-          pos[i*3+2] += velocities[i].z;
+        const erratic = 1 + currentThreatLevel * 0.02;
+        for (let i = 0; i < helixCount; i++) {
+          pos[i*3] += helixVel[i].x * erratic;
+          pos[i*3+1] += helixVel[i].y * erratic;
+          pos[i*3+2] += helixVel[i].z * erratic;
+          if (Math.abs(pos[i*3]) > 20) helixVel[i].x *= -1;
+          if (Math.abs(pos[i*3+1]) > 18) helixVel[i].y *= -1;
+          if (Math.abs(pos[i*3+2]) > 18) helixVel[i].z *= -1;
+        }
 
-          // Bounds
-          if(Math.abs(pos[i*3]) > 20) velocities[i].x *= -1;
-          if(Math.abs(pos[i*3+1]) > 15) velocities[i].y *= -1;
-
-          // Mouse repulsion
-          const dx = pos[i*3] - mouse.x * 20;
-          const dy = pos[i*3+1] - mouse.y * 15;
-          const dist = Math.sqrt(dx*dx + dy*dy);
-          if(dist < 5) { pos[i*3] += dx*0.1; pos[i*3+1] += dy*0.1; }
-
-          // Connections
-          for(let j=i+1; j<count; j++) {
-            const dx2 = pos[i*3] - pos[j*3];
-            const dy2 = pos[i*3+1] - pos[j*3+1];
-            const dz2 = pos[i*3+2] - pos[j*3+2];
-            const d2 = Math.sqrt(dx2*dx2 + dy2*dy2 + dz2*dz2);
-            if(d2 < 8) {
-              lPos[lineIdx++] = pos[i*3]; lPos[lineIdx++] = pos[i*3+1]; lPos[lineIdx++] = pos[i*3+2];
-              lPos[lineIdx++] = pos[j*3]; lPos[lineIdx++] = pos[j*3+1]; lPos[lineIdx++] = pos[j*3+2];
+        // Connection lines (every 3rd frame for perf)
+        if (frameCount % 3 === 0) {
+          let lineIdx = 0;
+          for (let i = 0; i < helixCount && lineIdx < maxLines * 6; i += 2) {
+            for (let j = i + 1; j < helixCount && lineIdx < maxLines * 6; j += 2) {
+              const dx = pos[i*3]-pos[j*3], dy = pos[i*3+1]-pos[j*3+1], dz = pos[i*3+2]-pos[j*3+2];
+              if (Math.sqrt(dx*dx+dy*dy+dz*dz) < 5) {
+                lPos[lineIdx++]=pos[i*3]; lPos[lineIdx++]=pos[i*3+1]; lPos[lineIdx++]=pos[i*3+2];
+                lPos[lineIdx++]=pos[j*3]; lPos[lineIdx++]=pos[j*3+1]; lPos[lineIdx++]=pos[j*3+2];
+              }
             }
           }
+          for (let k = lineIdx; k < maxLines * 6; k++) lPos[k] = 0;
+          lines.geometry.attributes.position.needsUpdate = true;
+          lineGeo.setDrawRange(0, lineIdx / 3);
         }
-        
-        // Clear remaining lines
-        for(let k=lineIdx; k<count*count*3; k++) lPos[k] = 0;
 
         particles.geometry.attributes.position.needsUpdate = true;
-        lines.geometry.attributes.position.needsUpdate = true;
-        
-        camera.position.x += (mouse.x * 5 - camera.position.x) * 0.05;
+        icosphere.rotation.y += 0.002; icosphere.rotation.x += 0.001;
+        ico2.rotation.y -= 0.003; ico2.rotation.z += 0.001;
+        cone.rotation.z = mouse.x * 0.3; cone.rotation.x = mouse.y * 0.2;
+
+        const tx = (mouse.x || deviceTilt.x) * 8;
+        const ty = 12 + (mouse.y || deviceTilt.y) * 4;
+        camera.position.x += (tx - camera.position.x) * 0.03;
+        camera.position.y += (ty - camera.position.y) * 0.03;
         camera.lookAt(0, 0, 0);
-        
+
         renderer.render(scene, camera);
       }
       animate();
-      
+
       window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
@@ -938,98 +1734,105 @@
       });
     }
 
-    /* =========================================
-       UTILITIES & EVENTS
-    ========================================= */
-    // Parallax
+    /* ═══════════════════ PARALLAX ═══════════════════ */
     function initParallax() {
       document.querySelectorAll('.glass-panel').forEach(p => {
-        p.addEventListener('mousemove', (e) => {
+        p.addEventListener('mousemove', e => {
           const r = p.getBoundingClientRect();
           const x = (e.clientX - r.left) / r.width - 0.5;
           const y = (e.clientY - r.top) / r.height - 0.5;
-          gsap.to(p, { rotateY: x * 5, rotateX: -y * 5, duration: 0.3, ease: "power2.out" });
+          gsap.to(p, { rotateY: x * 4, rotateX: -y * 4, duration: 0.3, ease: "power2.out" });
         });
         p.addEventListener('mouseleave', () => gsap.to(p, { rotateY: 0, rotateX: 0, duration: 0.5, ease: "elastic.out(1, 0.5)" }));
       });
     }
 
-    // Buttons
-    document.getElementById('btn-analyze').addEventListener('click', () => {
-      if(!isInitialized) return;
-      triggerShockwave();
-      sendChunk(els.input.value);
-      els.input.value = '';
+    /* ═══════════════════ KONAMI CODE EASTER EGG ═══════════════════ */
+    const konamiSequence = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+    let konamiIdx = 0;
+    document.addEventListener('keydown', e => {
+      if (e.key === konamiSequence[konamiIdx]) {
+        konamiIdx++;
+        if (konamiIdx === konamiSequence.length) { konamiIdx = 0; activateDevMode(); }
+      } else { konamiIdx = 0; }
     });
 
-    document.getElementById('btn-reset').addEventListener('click', () => {
-      if(ws && ws.readyState === 1) ws.send(JSON.stringify({type: 'reset'}));
-      else resetUI();
-    });
-    
-    document.getElementById('btn-clear').addEventListener('click', () => {
-      els.logContainer.innerHTML = ''; els.logPlaceholder.style.display = 'flex';
-      playTone('click');
-    });
+    function activateDevMode() {
+      devModeActive = !devModeActive;
+      if (devModeActive) {
+        setTheme('devmode');
+        document.getElementById('confusion-matrix').classList.add('visible');
+        triggerGlitch();
+        speak('Developer mode activated. Confusion matrix online.', true);
+        showToast('\uD83D\uDD13 DEV MODE: Confusion Matrix enabled!', 'success', 5000);
+        updateConfusionMatrix();
+      } else {
+        setTheme('cyan');
+        document.getElementById('confusion-matrix').classList.remove('visible');
+        speak('Developer mode deactivated.', true);
+      }
+    }
+    function updateConfusionMatrix() {
+      const last10 = analysisResults.slice(-10);
+      let tp = 0, fp = 0, fn = 0, tn = 0;
+      last10.forEach(r => {
+        const predicted = r.is_scam;
+        const actual = r.confidence > 60;
+        if (predicted && actual) tp++;
+        else if (predicted && !actual) fp++;
+        else if (!predicted && actual) fn++;
+        else tn++;
+      });
+      document.getElementById('cm-grid').innerHTML = `
+        <div style="margin-bottom:4px;opacity:0.6">           Pred S  Pred C</div>
+        <div>Act S  <span class="cm-cell" style="color:#4ade80">${tn}</span><span class="cm-cell" style="color:#f87171">${fp}</span></div>
+        <div>Act C  <span class="cm-cell" style="color:#f87171">${fn}</span><span class="cm-cell" style="color:#4ade80">${tp}</span></div>`;
+      const total = last10.length || 1;
+      document.getElementById('cm-stats').textContent = `Accuracy: ${((tp + tn) / total * 100).toFixed(0)}% | Samples: ${last10.length}`;
+    }
 
+    /* ═══════════════════ EVENT LISTENERS ═══════════════════ */
+    document.getElementById('btn-analyze').addEventListener('click', () => { if(!isInitialized) return; triggerShockwave(); sendChunk(els.input.value); els.input.value = ''; });
+    document.getElementById('btn-reset').addEventListener('click', () => { if(ws && ws.readyState === 1) ws.send(JSON.stringify({type:'reset'})); else resetUI(); });
+    document.getElementById('btn-clear').addEventListener('click', () => { els.logContainer.querySelectorAll('[data-chunk]').forEach(e => e.remove()); els.logPlaceholder.style.display = 'flex'; playTone('click'); });
     document.getElementById('btn-mic').addEventListener('click', () => els.visContainer.classList.contains('hidden') ? startListening() : stopListening());
-    
-    document.getElementById('btn-export').addEventListener('click', () => {
-      const blob = new Blob([`ScamGuard Report - Session: ${sessionId}\nGenerated: ${new Date().toISOString()}`], {type: 'text/plain'});
-      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `report-${sessionId}.txt`; a.click();
-      playTone('click');
-    });
+    document.getElementById('btn-voice').addEventListener('click', toggleJarvisMode);
+    document.getElementById('btn-export').addEventListener('click', exportReport);
+    document.getElementById('btn-history').addEventListener('click', toggleHistory);
 
-    // Threshold Sliders
-    els.sliderAlert.addEventListener('input', (e) => {
-      thresholds.alert = parseInt(e.target.value)/100;
-      els.valAlert.textContent = e.target.value + '%';
-      sendThresholds();
-    });
-    els.sliderDrop.addEventListener('input', (e) => {
-      thresholds.drop = parseInt(e.target.value)/100;
-      els.valDrop.textContent = e.target.value + '%';
-      sendThresholds();
-    });
+    els.sliderAlert.addEventListener('input', e => { thresholds.alert = parseInt(e.target.value)/100; els.valAlert.textContent = e.target.value + '%'; sendThresholds(); drawSparkline(); });
+    els.sliderDrop.addEventListener('input', e => { thresholds.drop = parseInt(e.target.value)/100; els.valDrop.textContent = e.target.value + '%'; sendThresholds(); drawSparkline(); });
 
-    // Settings Panel
     document.getElementById('btn-settings').addEventListener('click', () => els.settingsPanel.classList.add('open'));
     document.getElementById('btn-close-settings').addEventListener('click', () => els.settingsPanel.classList.remove('open'));
-    
-    window.setTheme = (theme) => {
-      document.documentElement.setAttribute('data-theme', theme);
-      playTone('click');
-    };
 
-    // Keyboard Shortcuts
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && e.ctrlKey) {
-        triggerShockwave(); sendChunk(els.input.value); els.input.value = '';
-      }
-      if (e.key === 's' && e.ctrlKey) {
-        e.preventDefault();
-        els.settingsPanel.classList.toggle('open');
-      }
-    });
+    window.setTheme = theme => { document.documentElement.setAttribute('data-theme', theme); playTone('click'); showToast(`Theme: ${theme}`, 'info', 2000); };
 
-    /* =========================================
-       EASTER EGG: SCAMGUARD_OVERRIDE
-    ========================================= */
-    let inputBuffer = "";
-    const secretCode = "SCAMGUARD_OVERRIDE";
-    
-    els.input.addEventListener('keyup', (e) => {
-      inputBuffer += e.key.toUpperCase();
-      if (inputBuffer.length > secretCode.length) inputBuffer = inputBuffer.slice(-secretCode.length);
-      
-      if (inputBuffer === secretCode) {
-        triggerGlitch();
-        speak("Override accepted. Welcome back, Administrator.");
-        els.input.value = ""; inputBuffer = "";
+    /* ═══════════════════ KEYBOARD SHORTCUTS ═══════════════════ */
+    document.addEventListener('keydown', e => {
+      const isInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
+      if (e.key === 'Escape') { closePalette(); document.getElementById('shortcuts-overlay').classList.remove('open'); document.getElementById('history-panel').classList.remove('open'); els.settingsPanel.classList.remove('open'); return; }
+      if (e.key === 'k' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); openPalette(); return; }
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); triggerShockwave(); sendChunk(els.input.value); els.input.value = ''; return; }
+      if (e.key === 's' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); els.settingsPanel.classList.toggle('open'); return; }
+      if (e.key === 'm' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); els.visContainer.classList.contains('hidden') ? startListening() : stopListening(); return; }
+      if (e.key === 'r' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); if(ws && ws.readyState === 1) ws.send(JSON.stringify({type:'reset'})); else resetUI(); return; }
+      if (e.key === 'e' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); exportReport(); return; }
+      if (e.key === 'v' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); toggleJarvisMode(); return; }
+      if (e.key === 'h' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); toggleHistory(); return; }
+      if (!isInput) {
+        if (e.key === '?') { toggleShortcuts(); return; }
+        if (e.key === '1') { setScenario('safe'); return; }
+        if (e.key === '2') { setScenario('phishing'); return; }
+        if (e.key === '3') { setScenario('vishing'); return; }
+        if (e.key === '4') { setScenario('urgent'); return; }
       }
     });
 
+    /* ═══════════════════ SPARKLINE RESIZE ═══════════════════ */
+    window.addEventListener('resize', () => {
+      if (els.sparklineCanvas && els.sparklineCanvas.parentElement) { els.sparklineCanvas.width = els.sparklineCanvas.parentElement.clientWidth * 2; drawSparkline(); }
+    });
   </script>
 </body>
 </html>
-
